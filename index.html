@@ -102,38 +102,31 @@
                     </p>
                 </form>
 
-                <!-- 회원가입 폼 -->
+                <!-- 회원가입 폼 (레이아웃 교정됨) -->
                 <form id="register-form" class="space-y-4 hidden">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="label-text">이름</label>
-                            <input type="text" id="reg-name" required maxlength="3" class="input-field" placeholder="홍길동">
-                        </div>
-                        <div>
-                            <label class="label-text">생년월일</label>
-                            <input type="text" id="reg-birth" required maxlength="10" class="input-field" placeholder="1990-01-01" oninput="autoHyphenDate(this)">
-                        </div>
+                    <div class="flex items-center gap-4">
+                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">이름</label>
+                        <input type="text" id="reg-name" required maxlength="3" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="3자 이내">
                     </div>
-                    
-                    <div>
-                        <label class="label-text">휴대폰 번호</label>
-                        <input type="tel" id="reg-phone" required maxlength="13" class="input-field" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)">
+                    <div class="flex items-center gap-4">
+                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">생년월일</label>
+                        <input type="text" id="reg-birth" required maxlength="10" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="1990-01-01" oninput="autoHyphenDate(this)">
                     </div>
-
-                    <div>
-                        <label class="label-text">입사일</label>
-                        <input type="text" id="reg-join" required maxlength="10" class="input-field" placeholder="2024-01-01" oninput="autoHyphenDate(this)">
+                    <div class="flex items-center gap-4">
+                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">휴대폰 번호</label>
+                        <input type="tel" id="reg-phone" required maxlength="13" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)">
                     </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="label-text">아이디</label>
-                            <input type="text" id="reg-id" required class="input-field" placeholder="사용할 ID">
-                        </div>
-                        <div>
-                            <label class="label-text">비밀번호</label>
-                            <input type="password" id="reg-pw" required class="input-field" placeholder="••••••••">
-                        </div>
+                    <div class="flex items-center gap-4">
+                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">입사일</label>
+                        <input type="text" id="reg-join" required maxlength="10" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="2024-01-01" oninput="autoHyphenDate(this)">
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">아이디</label>
+                        <input type="text" id="reg-id" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="사용할 ID">
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">비밀번호</label>
+                        <input type="password" id="reg-pw" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="••••••••">
                     </div>
 
                     <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-2">
@@ -318,6 +311,33 @@
             st.setHours(0,0,0,0);
             en.setHours(0,0,0,0);
             return Math.max(0, (en - st) / (1000 * 60 * 60 * 24) + 1);
+        }
+        
+        // 💡 입사일 기준 연차 개수 계산 로직
+        function calculateInitialLeave(joinDateStr) {
+            if (!joinDateStr) return 15;
+            const joinParts = joinDateStr.split('-');
+            if (joinParts.length !== 3) return 15;
+
+            const joinDate = new Date(joinParts[0], joinParts[1] - 1, joinParts[2]);
+            const today = new Date();
+
+            let months = (today.getFullYear() - joinDate.getFullYear()) * 12;
+            months -= joinDate.getMonth();
+            months += today.getMonth();
+
+            // 아직 입사일의 '일(day)'이 지나지 않았다면 개월수에서 1 차감
+            if (today.getDate() < joinDate.getDate()) {
+                months--;
+            }
+
+            if (months < 12) {
+                // 1년 미만: 만근한 개월 수 만큼 (최대 11개)
+                return Math.max(0, months); 
+            } else {
+                // 1년 이상: 15개
+                return 15; 
+            }
         }
 
         function showAlert(msg, type = 'info') {
@@ -532,6 +552,7 @@
             }
         };
 
+        // 💡 회원가입 로직 (연차 자동 계산 연동)
         document.getElementById('register-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -539,15 +560,19 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 중...';
             btn.disabled = true;
 
+            const joinDateValue = document.getElementById('reg-join').value;
+            const initialTotalLeave = calculateInitialLeave(joinDateValue); // 연차 계산
+
             // 가입 버튼 연타 방지를 위해 블로킹 로딩(true) 사용
             const res = await apiCall('register', {
                 name: document.getElementById('reg-name').value,
                 birth: document.getElementById('reg-birth').value,
                 phone: document.getElementById('reg-phone').value,
-                joinDate: document.getElementById('reg-join').value,
+                joinDate: joinDateValue,
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
-                role: 'user'
+                role: 'user',
+                totalLeave: initialTotalLeave // 👈 계산된 연차 개수를 서버로 전송
             }, true);
 
             btn.innerHTML = originalText; btn.disabled = false;
