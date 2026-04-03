@@ -25,11 +25,11 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 로딩 스피너 -->
-    <div id="loading" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
-        <div class="flex flex-col items-center gap-4">
+    <!-- 로딩 스피너 (연타 방지용 블로킹 오버레이) -->
+    <div id="loading" class="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-300">
+        <div class="flex flex-col items-center gap-4 bg-white/10 p-8 rounded-3xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
-            <p class="text-white font-bold text-sm">데이터를 처리 중입니다...</p>
+            <p class="text-white font-bold text-sm tracking-wide">서버에 안전하게 기록 중입니다...</p>
         </div>
     </div>
 
@@ -172,6 +172,10 @@
                         <div class="flex items-baseline gap-2 mt-2">
                             <h2 id="remaining-leave" class="text-5xl font-black text-slate-800">0</h2>
                             <span class="text-slate-400 font-bold text-lg">/ <span id="total-leave">15</span>일</span>
+                        </div>
+                        <!-- 시간차 사용 시 직관적으로 표기해주는 세부 알림 -->
+                        <div id="remaining-detail" class="hidden mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 text-sm font-black rounded-lg">
+                            <i class="fas fa-clock"></i> <span id="remaining-detail-text"></span>
                         </div>
                     </div>
 
@@ -382,13 +386,13 @@
             document.getElementById('confirm-modal').classList.add('hidden');
         }
 
-        // 🚀 낙관적 UI: 삭제 처리 실행
+        // 🚀 데이터 조작(삭제) 실행 시 블로킹 로딩 적용 (연타 방지)
         document.getElementById('confirm-delete-btn').onclick = async () => {
             if (!deleteTargetId) return;
             const targetId = deleteTargetId;
             closeConfirmModal();
 
-            // 즉각 화면에서 삭제 반영
+            // 즉각 화면에서 삭제 반영 (낙관적 UI)
             const targetIndex = state.requests.findIndex(r => r.id == targetId);
             let backupReq = null;
             if (targetIndex > -1) {
@@ -403,13 +407,13 @@
                 renderDashboard();
             }
 
-            // 백그라운드 통신
-            const res = await apiCall('deleteRequest', { requestId: targetId }, false);
+            // 서버 반영 (중복 클릭 방지를 위해 showLoader = true 강제 적용)
+            const res = await apiCall('deleteRequest', { requestId: targetId }, true);
             if (res) { 
                 showAlert('성공적으로 삭제되었습니다.', 'success'); 
                 refreshData(false); 
             } else {
-                // 실패 시 롤백
+                // 실패 시 화면 원상복구
                 if (backupReq) state.requests.splice(targetIndex, 0, backupReq);
                 renderDashboard();
             }
@@ -517,7 +521,8 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>인증 중...';
             btn.disabled = true; btn.classList.add('opacity-80', 'cursor-wait');
 
-            const res = await apiCall('login', { id, pw }, false); 
+            // 로그인 연타 방지를 위해 블로킹 로딩(true) 사용
+            const res = await apiCall('login', { id, pw }, true); 
             
             btn.innerHTML = originalText; btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-wait');
 
@@ -534,6 +539,7 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 중...';
             btn.disabled = true;
 
+            // 가입 버튼 연타 방지를 위해 블로킹 로딩(true) 사용
             const res = await apiCall('register', {
                 name: document.getElementById('reg-name').value,
                 birth: document.getElementById('reg-birth').value,
@@ -542,7 +548,7 @@
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
                 role: 'user'
-            }, false);
+            }, true);
 
             btn.innerHTML = originalText; btn.disabled = false;
             if (res) showSuccessModal(); 
@@ -579,7 +585,7 @@
             renderDashboard();
         }
 
-        // 🚀 낙관적 UI: 연차 신청
+        // 🚀 데이터 조작(연차 신청) 실행 시 블로킹 로딩 적용 (연타 방지)
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const start = document.getElementById('leave-start').value;
@@ -592,7 +598,7 @@
                 leaveType = `시간차 (${hours}시간)`;
             }
 
-            // 화면에 즉시 등록
+            // 화면에 즉시 등록 (낙관적 UI)
             const tempId = 'temp-' + Date.now();
             const newReq = {
                 id: tempId,
@@ -611,10 +617,11 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
             btn.disabled = true;
 
+            // 서버 반영 (중복 클릭 방지를 위해 showLoader = true 강제 적용)
             const res = await apiCall('requestLeave', {
                 userId: state.currentUser.id, userName: state.currentUser.name,
                 start, end, type: leaveType
-            }, false);
+            }, true);
 
             btn.innerHTML = originalText; btn.disabled = false;
             
@@ -622,9 +629,9 @@
                 showAlert('신청이 완료되었습니다.', 'success'); 
                 document.getElementById('leave-request-form').reset(); 
                 handleLeaveTypeChange(); 
-                refreshData(false); // 백그라운드 DB 동기화
+                refreshData(false); // 최신 데이터 백그라운드 동기화
             } else {
-                // 실패 시 롤백
+                // 실패 시 화면 원상복구
                 state.requests = state.requests.filter(r => r.id !== tempId);
                 renderDashboard();
             }
@@ -640,16 +647,16 @@
             }
         }
 
-        // 🚀 낙관적 UI: 관리자 상태 변경
+        // 🚀 데이터 조작(관리자 상태 변경) 실행 시 블로킹 로딩 적용 (연타 방지)
         async function updateStatus(reqId, status) {
             const targetReq = state.requests.find(r => r.id == reqId);
             let originalStatus = '';
             
             if (targetReq) {
+                // 화면 즉시 반영 (낙관적 UI)
                 originalStatus = targetReq.status;
                 targetReq.status = status;
                 
-                // 내 연차 상태가 바뀔 경우 잔여 연차 즉각 반영
                 if (targetReq.userId === state.currentUser.id) {
                     const diff = getDeductionDaysLocally(targetReq.start, targetReq.end, targetReq.type);
                     if (originalStatus !== '승인' && status === '승인') {
@@ -661,12 +668,14 @@
                 renderDashboard();
             }
 
-            const res = await apiCall('updateStatus', { requestId: reqId, status }, false);
+            // 서버 반영 (중복 클릭 방지를 위해 showLoader = true 강제 적용)
+            const res = await apiCall('updateStatus', { requestId: reqId, status }, true);
             if (res) { 
                 showAlert(`상태가 '${status}'(으)로 변경되었습니다.`); 
                 refreshData(false); 
             } else {
-                if (targetReq) targetReq.status = originalStatus; // 롤백
+                // 실패 시 화면 원상복구
+                if (targetReq) targetReq.status = originalStatus; 
                 renderDashboard();
             }
         }
@@ -674,8 +683,32 @@
         function renderDashboard() {
             const u = state.currentUser;
             if(!u) return;
-            document.getElementById('total-leave').innerText = u.total;
-            document.getElementById('remaining-leave').innerText = (u.total - (u.used || 0)).toFixed(1);
+            
+            const totalLeave = parseFloat(u.total) || 0;
+            const usedLeave = parseFloat(u.used) || 0;
+            const remainingLeave = totalLeave - usedLeave;
+
+            document.getElementById('total-leave').innerText = totalLeave;
+            
+            // 기존 2.4 등 반올림 되던 문제 해결 (정확하게 3자리 소수점까지 표시 후 뒷 0 제거)
+            document.getElementById('remaining-leave').innerText = parseFloat(remainingLeave.toFixed(3));
+            
+            // 직관적인 '일/시간' 환산 표기 UI 업데이트
+            const detailEl = document.getElementById('remaining-detail');
+            const isNegative = remainingLeave < 0;
+            const absRemaining = Math.abs(remainingLeave);
+            const rDays = Math.floor(absRemaining);
+            const rHours = Math.round((absRemaining - rDays) * 8);
+
+            if (rHours > 0) {
+                let text = isNegative ? '초과 사용: ' : '실제 잔여: ';
+                if (rDays > 0) text += `${rDays}일 `;
+                text += `${rHours}시간`;
+                document.getElementById('remaining-detail-text').innerText = text;
+                detailEl.classList.remove('hidden');
+            } else {
+                detailEl.classList.add('hidden');
+            }
             
             if (u.role === 'user') {
                 const hist = document.getElementById('history-body'); 
