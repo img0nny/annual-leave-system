@@ -116,7 +116,7 @@
         </div>
 
         <!-- 메인 섹션 -->
-        <div id="main-section" class="hidden animate-in fade-in duration-500">
+        <div id="main-section" class="hidden">
             <nav class="flex justify-between items-center mb-8 glass-morphism p-5 rounded-3xl shadow-sm border border-white">
                 <div class="flex items-center gap-3">
                     <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
@@ -278,7 +278,7 @@
                 console.error("통신 오류 상세:", err);
                 let errorMsg = err.message;
                 if (err.message === 'Failed to fetch') {
-                    errorMsg = "서버 응답 없음. 배포 권한을 확인하세요.";
+                    errorMsg = "서버 응답 없음 (CORS/배포 권한 확인 필요). 깃허브 배포 주소에서 직접 테스트해 보세요.";
                 }
                 if (showLoader) showAlert(`서버 오류: ${errorMsg}`, 'error');
                 return null;
@@ -287,8 +287,8 @@
             }
         }
 
-        // --- 🚀 새로고침 시 세션 유지 및 백그라운드 패칭 (로딩창 없음) ---
-        window.addEventListener('DOMContentLoaded', () => {
+        // --- 🚀 F5 새로고침 시 즉시 화면 렌더링 (깜빡임/애니메이션 딜레이 완전 제거) ---
+        (function checkSessionAndInit() {
             const savedDataStr = sessionStorage.getItem('leavepass_user');
             let user = null;
             let requests = [];
@@ -296,7 +296,6 @@
             if (savedDataStr) {
                 try {
                     const parsed = JSON.parse(savedDataStr);
-                    // 이전 버전 호환성 체크
                     if (parsed.user) {
                         user = parsed.user;
                         requests = parsed.requests || [];
@@ -307,7 +306,7 @@
             }
 
             if (user) {
-                // 1. 기존 데이터로 화면을 '즉시' 그리기 (로딩창 없음)
+                // 1. 기존 데이터로 애니메이션 없이 즉시 화면 그리기 (F5 딜레이 제거)
                 loginSuccess(user, requests, false);
 
                 // 2. 백그라운드에서 최신 데이터를 조용히 서버에 요청 (showLoader = false)
@@ -315,19 +314,17 @@
                     if (res && res.user) {
                         state.currentUser = res.user;
                         state.requests = res.requests;
-                        // 최신 데이터로 스토리지 및 화면 교체
                         sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
                         renderDashboard();
                     } else {
-                        // 세션 만료 등 오류 시 강제 로그아웃
                         logout();
                     }
                 });
             } else {
-                // 세션이 없으면 깜빡임 없이 바로 로그인 창 표시
+                // 세션이 없으면 즉시 로그인 창 표시
                 document.getElementById('auth-section').classList.remove('hidden');
             }
-        });
+        })();
 
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
@@ -361,7 +358,19 @@
             sessionStorage.setItem('leavepass_user', JSON.stringify({user, requests}));
 
             document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('main-section').classList.remove('hidden');
+            
+            const mainSec = document.getElementById('main-section');
+            mainSec.classList.remove('hidden');
+
+            if (showWelcomeMsg) {
+                // 직접 로그인 버튼을 누른 경우에만 부드러운 애니메이션 효과 적용
+                mainSec.classList.add('animate-in', 'fade-in', 'duration-500');
+                showAlert(`${user.name}님 환영합니다!`, 'success');
+            } else {
+                // F5 새로고침인 경우 애니메이션 딜레이 없이 즉시 표시
+                mainSec.classList.remove('animate-in', 'fade-in', 'duration-500');
+            }
+
             document.getElementById('welcome-msg').innerText = `${user.name} 님`;
             document.getElementById('user-badge').innerText = user.role.toUpperCase();
             
