@@ -25,7 +25,7 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 로딩 스피너 (초기 데이터 불러올 때만 사용) -->
+    <!-- 로딩 스피너 -->
     <div id="loading" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
         <div class="flex flex-col items-center gap-4">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <!-- 회원가입 성공 커스텀 팝업 (모달) -->
+    <!-- 회원가입 성공 커스텀 팝업 -->
     <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
@@ -45,11 +45,26 @@
         </div>
     </div>
 
+    <!-- 삭제 확인 커스텀 팝업 -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+            <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">정말 삭제할까요?</h3>
+            <p class="text-slate-500 font-medium mb-8">해당 연차 내역이 영구적으로 삭제됩니다.<br>(승인건 삭제 시 연차 일수 자동 복구)</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-4 rounded-2xl font-black hover:bg-slate-200 transition-all">취소</button>
+                <button id="confirm-delete-btn" class="flex-1 bg-rose-500 text-white p-4 rounded-2xl font-black hover:bg-rose-600 transition-all">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 알림 컨테이너 -->
     <div id="alert-container" class="fixed top-4 right-4 z-[60] space-y-2"></div>
 
-    <div id="app" class="max-w-6xl mx-auto px-4 py-8">
-        <!-- 인증 섹션 (기본적으로 숨겨서 새로고침 시 깜빡임 방지) -->
+    <div id="app" class="max-w-7xl mx-auto px-4 py-8">
+        <!-- 인증 섹션 -->
         <div id="auth-section" class="max-w-md mx-auto mt-10 hidden">
             <div class="glass-morphism p-8 rounded-3xl shadow-2xl border border-white">
                 <div class="text-center mb-8">
@@ -126,7 +141,7 @@
                     <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
                         <i class="fas fa-calendar-check text-lg"></i>
                     </div>
-                    <span class="text-2xl font-black text-slate-800 tracking-tighter">LeavePass</span>
+                    <span class="text-2xl font-black text-slate-800 tracking-tighter">서울더리본치과</span>
                     <span id="user-badge" class="ml-2 px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-black rounded-full uppercase border border-blue-200">USER</span>
                 </div>
                 <div class="flex items-center gap-4">
@@ -138,7 +153,7 @@
             </nav>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- 통계 정보 -->
+                <!-- 통계 및 연차 신청 (좌측 1단) -->
                 <div class="space-y-6">
                     <div class="glass-morphism p-8 rounded-3xl shadow-sm border border-white border-l-8 border-l-blue-500">
                         <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
@@ -148,7 +163,6 @@
                         </div>
                     </div>
 
-                    <!-- 신청 폼 -->
                     <div id="user-request-card" class="glass-morphism p-6 rounded-3xl shadow-sm border border-white">
                         <h3 class="text-lg font-black text-slate-800 mb-5 flex items-center gap-2">
                             <i class="fas fa-paper-plane text-blue-500"></i> 연차 신청
@@ -180,11 +194,13 @@
                     </div>
                 </div>
 
-                <!-- 히스토리 목록 -->
+                <!-- 내역 및 관리 (우측 2단) -->
                 <div class="lg:col-span-2 space-y-6">
+                    
+                    <!-- 일반 사원용: 본인 연차 내역 -->
                     <div id="user-history" class="glass-morphism rounded-3xl shadow-sm border border-white overflow-hidden">
                         <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
-                            <h3 class="text-lg font-black text-slate-800">연차 내역</h3>
+                            <h3 class="text-lg font-black text-slate-800">내 연차 내역</h3>
                             <button onclick="refreshData(true)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all">
                                 <i class="fas fa-sync-alt mr-1"></i> 새로고침
                             </button>
@@ -203,10 +219,30 @@
                         </div>
                     </div>
 
-                    <!-- 관리자 패널 -->
+                    <!-- 관리자 전용: 전체 관리 데스크 -->
                     <div id="admin-panel" class="hidden glass-morphism rounded-3xl shadow-sm border border-white overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 bg-white/50 font-black text-lg text-slate-800">승인 관리 데스크</div>
-                        <div id="admin-queue-body" class="divide-y divide-slate-100"></div>
+                        <div class="p-6 border-b border-slate-100 bg-white/50 flex justify-between items-center">
+                            <h3 class="text-lg font-black text-slate-800">
+                                <i class="fas fa-users-cog text-blue-600 mr-2"></i>전체 연차 관리 데스크
+                            </h3>
+                            <button onclick="refreshData(true)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all">
+                                <i class="fas fa-sync-alt mr-1"></i> 데이터 갱신
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-slate-50/80">
+                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">신청자</th>
+                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">기간</th>
+                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">구분</th>
+                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">상태</th>
+                                        <th class="p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-queue-body" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -218,20 +254,15 @@
 
         let state = { currentUser: null, requests: [] };
 
-        // --- 자동 하이픈 생성 로직 ---
+        // --- 유틸리티 ---
         function autoHyphenPhone(target) {
-            target.value = target.value
-                .replace(/[^0-9]/g, '')
-                .replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
+            target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
         }
 
         function autoHyphenDate(target) {
-            target.value = target.value
-                .replace(/[^0-9]/g, '')
-                .replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
+            target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
         }
 
-        // --- 날짜 포맷 변환 (ISO -> YYYY-MM-DD) ---
         function formatDate(dateStr) {
             if (!dateStr) return "-";
             const d = new Date(dateStr);
@@ -252,12 +283,33 @@
             setTimeout(() => div.remove(), 4000);
         }
 
-        // 가입 성공 모달 관련
+        // --- 모달 관리 ---
         function showSuccessModal() { document.getElementById('success-modal').classList.remove('hidden'); }
         function closeSuccessModal() {
             document.getElementById('success-modal').classList.add('hidden');
             toggleAuthMode(false); 
         }
+
+        let deleteTargetId = null;
+        function openConfirmModal(id) {
+            deleteTargetId = id;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+        function closeConfirmModal() {
+            deleteTargetId = null;
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        // 삭제 처리 실행 (모달 내부 삭제 버튼)
+        document.getElementById('confirm-delete-btn').onclick = async () => {
+            if (!deleteTargetId) return;
+            closeConfirmModal();
+            const res = await apiCall('deleteRequest', { requestId: deleteTargetId }, true);
+            if (res) { 
+                showAlert('성공적으로 삭제되었습니다.', 'success'); 
+                refreshData(true); 
+            }
+        };
 
         function toggleLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function toggleAuthMode(isRegister) {
@@ -265,7 +317,7 @@
             document.getElementById('register-form').classList.toggle('hidden', !isRegister);
         }
 
-        // --- API 호출 (showLoader 파라미터 추가로 백그라운드 통신 지원) ---
+        // --- API 호출 ---
         async function apiCall(action, data = {}, showLoader = true) {
             if (showLoader) toggleLoading(true);
             try {
@@ -284,104 +336,82 @@
                 console.error("통신 오류 상세:", err);
                 let errorMsg = err.message;
                 if (err.message === 'Failed to fetch') {
-                    errorMsg = "서버 응답 없음 (CORS/배포 권한 확인 필요). 깃허브 배포 주소에서 직접 테스트해 보세요.";
+                    errorMsg = "서버 응답 없음 (CORS/배포 권한 확인 필요).";
                 }
                 if (showLoader) showAlert(`서버 오류: ${errorMsg}`, 'error');
-                return null; // 네트워크 에러나 fetch 중단 시 null 반환
+                return null;
             } finally { 
                 if (showLoader) toggleLoading(false); 
             }
         }
 
-        // --- 🚀 F5 새로고침 시 즉시 화면 렌더링 (깜빡임/애니메이션 딜레이 완전 제거) ---
+        // --- 세션 체크 (새로고침 유지) ---
         (function checkSessionAndInit() {
             const savedDataStr = sessionStorage.getItem('leavepass_user');
-            let user = null;
-            let requests = [];
+            let user = null; let requests = [];
 
             if (savedDataStr) {
                 try {
                     const parsed = JSON.parse(savedDataStr);
-                    if (parsed.user) {
-                        user = parsed.user;
-                        requests = parsed.requests || [];
-                    } else {
-                        user = parsed;
-                    }
+                    if (parsed.user) { user = parsed.user; requests = parsed.requests || []; } 
+                    else { user = parsed; }
                 } catch(e) {}
             }
 
             if (user) {
-                // 1. 기존 데이터로 애니메이션 없이 즉시 화면 그리기 (F5 딜레이 제거)
                 loginSuccess(user, requests, false);
-
-                // 2. 백그라운드에서 최신 데이터를 조용히 서버에 요청 (showLoader = false)
                 apiCall('fetchData', { id: user.id, role: user.role }, false).then(res => {
                     if (res && res.user) {
                         state.currentUser = res.user;
                         state.requests = res.requests;
                         sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
                         
-                        // 캐시 정보 최신화
                         const cachedStr = localStorage.getItem('leavepass_cache');
                         if (cachedStr) {
                             const cached = JSON.parse(cachedStr);
                             localStorage.setItem('leavepass_cache', JSON.stringify({...cached, user: res.user, requests: res.requests}));
                         }
-
                         renderDashboard();
                     } 
                 });
             } else {
-                // 세션이 없으면 즉시 로그인 창 표시
                 document.getElementById('auth-section').classList.remove('hidden');
             }
         })();
 
-        // --- 🚀 즉각적인 로그인 속도를 위한 최적화 로직 ---
+        // --- 폼 이벤트 ---
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('login-id').value;
             const pw = document.getElementById('login-pw').value;
             
-            // 1. 로컬 캐시를 이용한 0.01초 즉시 로그인
             const cachedData = localStorage.getItem('leavepass_cache');
             if (cachedData) {
                 const cached = JSON.parse(cachedData);
                 if (cached.id === id && cached.pw === pw) {
-                    // 캐시 정보 일치 시 서버 응답을 기다리지 않고 즉시 화면 넘김
                     loginSuccess(cached.user, cached.requests, true);
-                    
-                    // 화면 넘김 후 백그라운드에서 조용히 최신 데이터 갱신
                     apiCall('fetchData', { id: cached.user.id, role: cached.user.role }, false).then(res => {
                         if (res && res.user) {
-                            state.currentUser = res.user;
-                            state.requests = res.requests;
+                            state.currentUser = res.user; state.requests = res.requests;
                             sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
                             localStorage.setItem('leavepass_cache', JSON.stringify({ id, pw, user: res.user, requests: res.requests }));
                             renderDashboard();
                         }
                     });
-                    return; // 함수 종료
+                    return; 
                 }
             }
 
-            // 2. 첫 로그인인 경우 -> 검은 화면 대신 버튼 안에서 즉각적인 애니메이션 표시
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>인증 중...';
-            btn.disabled = true;
-            btn.classList.add('opacity-80', 'cursor-wait');
+            btn.disabled = true; btn.classList.add('opacity-80', 'cursor-wait');
 
-            // showLoader = false 로 검은 화면 숨기고 통신
             const res = await apiCall('login', { id, pw }, false); 
             
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            btn.classList.remove('opacity-80', 'cursor-wait');
+            btn.innerHTML = originalText; btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-wait');
 
             if (res && res.user) {
-                // 최초 로그인 성공 시 캐시 정보 저장
                 localStorage.setItem('leavepass_cache', JSON.stringify({ id, pw, user: res.user, requests: res.requests }));
                 loginSuccess(res.user, res.requests, true);
             }
@@ -389,8 +419,6 @@
 
         document.getElementById('register-form').onsubmit = async (e) => {
             e.preventDefault();
-            
-            // 버튼 로딩 애니메이션 적용
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 중...';
@@ -404,34 +432,24 @@
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
                 role: 'user'
-            }, false); // 검은화면 숨김
+            }, false);
 
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-
-            if (res) {
-                showSuccessModal(); 
-            }
+            btn.innerHTML = originalText; btn.disabled = false;
+            if (res) showSuccessModal(); 
         };
 
         function loginSuccess(user, requests = [], showWelcomeMsg = true) {
-            state.currentUser = user;
-            state.requests = requests;
-            
-            // 세션 스토리지에 '유저'와 '내역'을 통째로 저장
+            state.currentUser = user; state.requests = requests;
             sessionStorage.setItem('leavepass_user', JSON.stringify({user, requests}));
 
             document.getElementById('auth-section').classList.add('hidden');
-            
             const mainSec = document.getElementById('main-section');
             mainSec.classList.remove('hidden');
 
             if (showWelcomeMsg) {
-                // 직접 로그인 버튼을 누른 경우에만 부드러운 애니메이션 효과 적용
                 mainSec.classList.add('animate-in', 'fade-in', 'duration-500');
                 showAlert(`${user.name}님 환영합니다!`, 'success');
             } else {
-                // F5 새로고침인 경우 애니메이션 딜레이 없이 즉시 표시
                 mainSec.classList.remove('animate-in', 'fade-in', 'duration-500');
             }
 
@@ -439,9 +457,15 @@
             document.getElementById('user-badge').innerText = user.role.toUpperCase();
             
             const isAdmin = user.role === 'admin';
-            document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
-            document.getElementById('user-request-card').classList.toggle('hidden', isAdmin);
-            document.getElementById('user-history').classList.toggle('hidden', isAdmin);
+            
+            // 관리자/일반사원에 따른 영역 숨김 처리
+            if(isAdmin) {
+                document.getElementById('user-history').classList.add('hidden'); // 사원용 리스트 숨김
+                document.getElementById('admin-panel').classList.remove('hidden'); // 관리자 리스트 표시
+            } else {
+                document.getElementById('user-history').classList.remove('hidden');
+                document.getElementById('admin-panel').classList.add('hidden');
+            }
             
             renderDashboard();
         }
@@ -460,33 +484,26 @@
             const res = await apiCall('requestLeave', {
                 userId: state.currentUser.id, userName: state.currentUser.name,
                 start, end, type: document.getElementById('leave-type').value
-            }, false); // 검은화면 숨김
+            }, false);
 
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-
-            if (res) { 
-                showAlert('신청이 완료되었습니다.', 'success'); 
-                document.getElementById('leave-request-form').reset();
-                refreshData(false); // 백그라운드로 갱신
-            }
+            btn.innerHTML = originalText; btn.disabled = false;
+            if (res) { showAlert('신청이 완료되었습니다.', 'success'); document.getElementById('leave-request-form').reset(); refreshData(false); }
         };
 
-        // 버튼 클릭 새로고침
         async function refreshData(showLoader = true) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, showLoader);
             if (res) { 
-                state.currentUser = res.user; 
-                state.requests = res.requests;
+                state.currentUser = res.user; state.requests = res.requests;
                 sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
                 renderDashboard(); 
             }
         }
 
+        // 연차 상태 업데이트 (승인, 반려, 수정 등)
         async function updateStatus(reqId, status) {
             const res = await apiCall('updateStatus', { requestId: reqId, status });
-            if (res) { showAlert(`처리되었습니다: ${status}`); refreshData(true); }
+            if (res) { showAlert(`상태가 '${status}'(으)로 변경되었습니다.`); refreshData(true); }
         }
 
         function renderDashboard() {
@@ -495,34 +512,77 @@
             document.getElementById('total-leave').innerText = u.total;
             document.getElementById('remaining-leave').innerText = (u.total - (u.used || 0)).toFixed(1);
             
-            const hist = document.getElementById('history-body'); 
-            hist.innerHTML = '';
-            
-            state.requests.forEach(req => {
-                if (u.role === 'user' && req.userId !== u.id) return;
-                const color = req.status === '승인' ? 'bg-emerald-100 text-emerald-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
+            // 일반 사원용 내역 렌더링
+            if (u.role === 'user') {
+                const hist = document.getElementById('history-body'); 
+                hist.innerHTML = '';
                 
-                const formattedStart = formatDate(req.start);
-                const formattedEnd = formatDate(req.end);
-
-                hist.innerHTML += `<tr class="hover:bg-slate-50 transition-all font-medium"><td class="p-5 text-slate-700 text-[13px] tracking-tight">${formattedStart} ~ ${formattedEnd}</td><td class="p-5 text-xs font-black text-slate-400">${req.type}</td><td class="p-5 text-right"><span class="px-3 py-1.5 rounded-full text-[10px] font-black ${color}">${req.status}</span></td></tr>`;
-            });
+                let myRequests = state.requests.filter(r => r.userId === u.id);
+                if (myRequests.length === 0) {
+                    hist.innerHTML = '<tr><td colspan="3" class="p-10 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>';
+                } else {
+                    myRequests.forEach(req => {
+                        const color = req.status === '승인' ? 'bg-emerald-100 text-emerald-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
+                        hist.innerHTML += `<tr class="hover:bg-slate-50 transition-all font-medium"><td class="p-5 text-slate-700 text-[13px] tracking-tight">${formatDate(req.start)} ~ ${formatDate(req.end)}</td><td class="p-5 text-xs font-black text-slate-400">${req.type}</td><td class="p-5 text-right"><span class="px-3 py-1.5 rounded-full text-[10px] font-black ${color}">${req.status}</span></td></tr>`;
+                    });
+                }
+            }
             
+            // 관리자 전용 렌더링 (승인, 삭제, 상태 수정 기능 포함)
             if (u.role === 'admin') {
                 const adminBody = document.getElementById('admin-queue-body'); 
                 adminBody.innerHTML = '';
-                state.requests.filter(r => r.status === '대기').forEach(req => {
-                    const formattedStart = formatDate(req.start);
-                    const formattedEnd = formatDate(req.end);
+                
+                if (state.requests.length === 0) {
+                    adminBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-300 font-bold">등록된 연차 신청이 없습니다.</td></tr>';
+                } else {
+                    state.requests.forEach(req => {
+                        const fStart = formatDate(req.start);
+                        const fEnd = formatDate(req.end);
+                        const isPending = req.status === '대기';
+                        const color = req.status === '승인' ? 'bg-emerald-100 text-emerald-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
 
-                    adminBody.innerHTML += `<div class="p-6 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-slate-50 transition-all border-b border-slate-50"><div><div class="flex items-center gap-2"><span class="font-black text-slate-800">${req.userName}</span><span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-black">${req.type}</span></div><div class="text-xs text-slate-500 mt-1 font-bold">${formattedStart} ~ ${formattedEnd}</div></div><div class="flex gap-2"><button onclick="updateStatus('${req.id}', '승인')" class="px-4 py-2 bg-emerald-500 text-white rounded-xl font-black text-xs shadow-lg">승인</button><button onclick="updateStatus('${req.id}', '반려')" class="px-4 py-2 bg-rose-500 text-white rounded-xl font-black text-xs shadow-lg">반려</button></div></div>`;
-                });
+                        // 관리 액션 버튼들 (대기중일 때와 승인/반려 상태일 때 다름)
+                        let actionBtns = '';
+                        if (isPending) {
+                            actionBtns = `
+                                <button onclick="updateStatus('${req.id}', '승인')" class="px-3 py-1.5 bg-emerald-500 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-emerald-600 transition-all">승인</button>
+                                <button onclick="updateStatus('${req.id}', '반려')" class="px-3 py-1.5 bg-rose-500 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-rose-600 transition-all">반려</button>
+                                <button onclick="openConfirmModal('${req.id}')" class="px-3 py-1.5 bg-slate-400 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
+                            `;
+                        } else {
+                            actionBtns = `
+                                <button onclick="updateStatus('${req.id}', '대기')" class="px-3 py-1.5 bg-amber-400 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-amber-500 transition-all">대기로 수정</button>
+                                <button onclick="openConfirmModal('${req.id}')" class="px-3 py-1.5 bg-slate-400 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
+                            `;
+                        }
+
+                        adminBody.innerHTML += `
+                            <tr class="hover:bg-slate-50 transition-all font-medium border-b border-slate-50">
+                                <td class="p-4">
+                                    <div class="font-black text-slate-800">${req.userName}</div>
+                                    <div class="text-[10px] text-slate-400 font-bold">${req.userId}</div>
+                                </td>
+                                <td class="p-4 text-slate-600 text-[12px] tracking-tight">${fStart} ~ <br class="md:hidden">${fEnd}</td>
+                                <td class="p-4 text-xs font-black text-blue-500 bg-blue-50/50 rounded-lg text-center">${req.type}</td>
+                                <td class="p-4">
+                                    <span class="px-2 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <div class="flex justify-end gap-1.5 flex-wrap">
+                                        ${actionBtns}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
             }
         }
 
         function logout() { 
             sessionStorage.removeItem('leavepass_user');
-            localStorage.removeItem('leavepass_cache'); // 로그아웃 시 캐시도 안전하게 삭제
+            localStorage.removeItem('leavepass_cache'); 
             location.reload(); 
         }
     </script>
