@@ -25,7 +25,7 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 로딩 스피너 (초기 데이터 불러올 때만 사용) -->
+    <!-- 로딩 스피너 -->
     <div id="loading" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
         <div class="flex flex-col items-center gap-4">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
@@ -33,7 +33,19 @@
         </div>
     </div>
 
-    <!-- 회원가입 성공 커스텀 팝업 (모달) -->
+    <!-- 로그인 실패 커스텀 팝업 -->
+    <div id="login-error-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+            <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fas fa-exclamation"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">로그인 실패</h3>
+            <p class="text-slate-500 font-medium mb-8">아이디 또는 비밀번호가<br>일치하지 않습니다.</p>
+            <button onclick="closeLoginErrorModal()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all">다시 입력하기</button>
+        </div>
+    </div>
+
+    <!-- 회원가입 성공 커스텀 팝업 -->
     <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
@@ -45,7 +57,7 @@
         </div>
     </div>
 
-    <!-- 삭제 확인 커스텀 팝업 (모달) -->
+    <!-- 삭제 확인 커스텀 팝업 -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
@@ -72,7 +84,7 @@
                     <p class="text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
                 </div>
 
-                <!-- 로그인 폼 (가로 정렬 교정됨) -->
+                <!-- 로그인 폼 -->
                 <form id="login-form" class="space-y-4">
                     <div class="flex items-center gap-4">
                         <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">아이디</label>
@@ -291,6 +303,19 @@
             return `${year}-${month}-${day}`;
         }
 
+        // 프론트엔드 연차 차감 일수 낙관적 계산 헬퍼
+        function getDeductionDaysLocally(start, end, type) {
+            if (type === '반차') return 0.5;
+            let hourMatch = type.match(/시간차\s*\((\d+)시간\)/);
+            if (hourMatch) return parseInt(hourMatch[1], 10) / 8;
+            if (type === '병가' || type === '경조사') return 0;
+            const st = new Date(start);
+            const en = new Date(end);
+            st.setHours(0,0,0,0);
+            en.setHours(0,0,0,0);
+            return Math.max(0, (en - st) / (1000 * 60 * 60 * 24) + 1);
+        }
+
         function showAlert(msg, type = 'info') {
             const container = document.getElementById('alert-container');
             const div = document.createElement('div');
@@ -334,6 +359,13 @@
         });
 
         // --- 모달 관리 ---
+        function showLoginErrorModal() { document.getElementById('login-error-modal').classList.remove('hidden'); }
+        function closeLoginErrorModal() { 
+            document.getElementById('login-error-modal').classList.add('hidden'); 
+            document.getElementById('login-pw').value = '';
+            document.getElementById('login-pw').focus();
+        }
+
         function showSuccessModal() { document.getElementById('success-modal').classList.remove('hidden'); }
         function closeSuccessModal() {
             document.getElementById('success-modal').classList.add('hidden');
@@ -350,14 +382,36 @@
             document.getElementById('confirm-modal').classList.add('hidden');
         }
 
-        // 삭제 처리 실행
+        // 🚀 낙관적 UI: 삭제 처리 실행
         document.getElementById('confirm-delete-btn').onclick = async () => {
             if (!deleteTargetId) return;
+            const targetId = deleteTargetId;
             closeConfirmModal();
-            const res = await apiCall('deleteRequest', { requestId: deleteTargetId }, true);
+
+            // 즉각 화면에서 삭제 반영
+            const targetIndex = state.requests.findIndex(r => r.id == targetId);
+            let backupReq = null;
+            if (targetIndex > -1) {
+                backupReq = state.requests[targetIndex];
+                state.requests.splice(targetIndex, 1);
+                
+                // 내 연차인 경우 잔여 연차 즉각 복구
+                if (backupReq.status === '승인' && backupReq.userId === state.currentUser.id) {
+                    const diff = getDeductionDaysLocally(backupReq.start, backupReq.end, backupReq.type);
+                    state.currentUser.used = (parseFloat(state.currentUser.used || 0) - diff).toString();
+                }
+                renderDashboard();
+            }
+
+            // 백그라운드 통신
+            const res = await apiCall('deleteRequest', { requestId: targetId }, false);
             if (res) { 
                 showAlert('성공적으로 삭제되었습니다.', 'success'); 
-                refreshData(true); 
+                refreshData(false); 
+            } else {
+                // 실패 시 롤백
+                if (backupReq) state.requests.splice(targetIndex, 0, backupReq);
+                renderDashboard();
             }
         };
 
@@ -388,6 +442,12 @@
                 if (err.message === 'Failed to fetch') {
                     errorMsg = "서버 응답 없음 (CORS/배포 권한 확인 필요).";
                 }
+                
+                if (action === 'login' && errorMsg.includes('일치하지 않습니다')) {
+                    showLoginErrorModal();
+                    return null;
+                }
+
                 if (showLoader) showAlert(`서버 오류: ${errorMsg}`, 'error');
                 return null;
             } finally { 
@@ -519,6 +579,7 @@
             renderDashboard();
         }
 
+        // 🚀 낙관적 UI: 연차 신청
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const start = document.getElementById('leave-start').value;
@@ -531,6 +592,20 @@
                 leaveType = `시간차 (${hours}시간)`;
             }
 
+            // 화면에 즉시 등록
+            const tempId = 'temp-' + Date.now();
+            const newReq = {
+                id: tempId,
+                userId: state.currentUser.id,
+                userName: state.currentUser.name,
+                start: start,
+                end: end,
+                type: leaveType,
+                status: '대기'
+            };
+            state.requests.unshift(newReq);
+            renderDashboard();
+
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
@@ -542,11 +617,16 @@
             }, false);
 
             btn.innerHTML = originalText; btn.disabled = false;
+            
             if (res) { 
                 showAlert('신청이 완료되었습니다.', 'success'); 
                 document.getElementById('leave-request-form').reset(); 
-                handleLeaveTypeChange(); // UI 초기화
-                refreshData(false); 
+                handleLeaveTypeChange(); 
+                refreshData(false); // 백그라운드 DB 동기화
+            } else {
+                // 실패 시 롤백
+                state.requests = state.requests.filter(r => r.id !== tempId);
+                renderDashboard();
             }
         };
 
@@ -560,9 +640,35 @@
             }
         }
 
+        // 🚀 낙관적 UI: 관리자 상태 변경
         async function updateStatus(reqId, status) {
-            const res = await apiCall('updateStatus', { requestId: reqId, status });
-            if (res) { showAlert(`상태가 '${status}'(으)로 변경되었습니다.`); refreshData(true); }
+            const targetReq = state.requests.find(r => r.id == reqId);
+            let originalStatus = '';
+            
+            if (targetReq) {
+                originalStatus = targetReq.status;
+                targetReq.status = status;
+                
+                // 내 연차 상태가 바뀔 경우 잔여 연차 즉각 반영
+                if (targetReq.userId === state.currentUser.id) {
+                    const diff = getDeductionDaysLocally(targetReq.start, targetReq.end, targetReq.type);
+                    if (originalStatus !== '승인' && status === '승인') {
+                        state.currentUser.used = (parseFloat(state.currentUser.used || 0) + diff).toString();
+                    } else if (originalStatus === '승인' && status !== '승인') {
+                        state.currentUser.used = (parseFloat(state.currentUser.used || 0) - diff).toString();
+                    }
+                }
+                renderDashboard();
+            }
+
+            const res = await apiCall('updateStatus', { requestId: reqId, status }, false);
+            if (res) { 
+                showAlert(`상태가 '${status}'(으)로 변경되었습니다.`); 
+                refreshData(false); 
+            } else {
+                if (targetReq) targetReq.status = originalStatus; // 롤백
+                renderDashboard();
+            }
         }
 
         function renderDashboard() {
