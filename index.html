@@ -196,7 +196,8 @@
     </div>
 
     <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8L9oA-7/exec"; 
+        // 새로운 배포 URL 적용
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8MMIq0F6g/exec"; 
 
         let state = { currentUser: null, requests: [] };
 
@@ -229,19 +230,31 @@
             document.getElementById('register-form').classList.toggle('hidden', !isRegister);
         }
 
-        // --- API 호출 ---
+        // --- API 호출 (개선된 버전) ---
         async function apiCall(action, data = {}) {
             toggleLoading(true);
             try {
                 const response = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
                     body: JSON.stringify({ action, ...data })
                 });
+
+                if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
+                
                 const result = await response.json();
                 if (result.status === 'error') throw new Error(result.message);
                 return result;
             } catch (err) {
-                showAlert(`서버 오류: ${err.message}`, 'error');
+                console.error("통신 오류 상세:", err);
+                let errorMsg = err.message;
+                if (err.message === 'Failed to fetch') {
+                    errorMsg = "서버 응답 없음 (CORS/배포 권한 확인 필요). 깃허브 배포 주소에서 직접 테스트해 보세요.";
+                }
+                showAlert(`서버 오류: ${errorMsg}`, 'error');
                 return null;
             } finally { toggleLoading(false); }
         }
@@ -263,7 +276,7 @@
                 joinDate: document.getElementById('reg-join').value,
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
-                role: 'user' // 가입 시 기본값 user
+                role: 'user'
             });
             if (res) { showAlert('가입 완료! 로그인 해주세요.', 'success'); toggleAuthMode(false); }
         };
@@ -306,8 +319,9 @@
 
         function renderDashboard() {
             const u = state.currentUser;
+            if(!u) return;
             document.getElementById('total-leave').innerText = u.total;
-            document.getElementById('remaining-leave').innerText = (u.total - u.used).toFixed(1);
+            document.getElementById('remaining-leave').innerText = (u.total - (u.used || 0)).toFixed(1);
             const hist = document.getElementById('history-body'); hist.innerHTML = '';
             state.requests.forEach(req => {
                 if (u.role === 'user' && req.userId !== u.id) return;
