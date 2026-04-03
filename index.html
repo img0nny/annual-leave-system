@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>스마트 연차 관리 시스템 (LeavePass)</title>
+    <title>서울더리본치과 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -25,7 +25,7 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 로딩 스피너 -->
+    <!-- 로딩 스피너 (초기 데이터 불러올 때만 사용) -->
     <div id="loading" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
         <div class="flex flex-col items-center gap-4">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
@@ -53,21 +53,23 @@
         <div id="auth-section" class="max-w-md mx-auto mt-10 hidden">
             <div class="glass-morphism p-8 rounded-3xl shadow-2xl border border-white">
                 <div class="text-center mb-8">
-                    <h1 class="text-4xl font-black text-blue-600 tracking-tighter">LeavePass</h1>
+                    <h1 class="text-4xl font-black text-blue-600 tracking-tighter">서울더리본치과</h1>
                     <p class="text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
                 </div>
 
                 <!-- 로그인 폼 -->
                 <form id="login-form" class="space-y-4">
                     <div>
-                        <label class="label-text">아이디 (ID)</label>
+                        <label class="label-text">아이디</label>
                         <input type="text" id="login-id" required class="input-field" placeholder="아이디를 입력하세요">
                     </div>
                     <div>
                         <label class="label-text">비밀번호</label>
                         <input type="password" id="login-pw" required class="input-field" placeholder="••••••••">
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg mt-2">로그인</button>
+                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg mt-2">
+                        로그인
+                    </button>
                     <p class="text-center text-sm text-slate-500 mt-6 font-medium">
                         계정이 없으신가요? <a href="#" onclick="toggleAuthMode(true)" class="text-blue-600 font-black hover:underline cursor-pointer">회원가입</a>
                     </p>
@@ -107,7 +109,9 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-2">가입 완료</button>
+                    <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-2">
+                        가입 완료
+                    </button>
                     <p class="text-center text-sm text-slate-500 mt-6 font-medium">
                         이미 계정이 있나요? <a href="#" onclick="toggleAuthMode(false)" class="text-blue-600 font-black hover:underline cursor-pointer">로그인</a>
                     </p>
@@ -122,7 +126,7 @@
                     <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
                         <i class="fas fa-calendar-check text-lg"></i>
                     </div>
-                    <span class="text-2xl font-black text-slate-800 tracking-tighter">LeavePass</span>
+                    <span class="text-2xl font-black text-slate-800 tracking-tighter">서울더리본치과</span>
                     <span id="user-badge" class="ml-2 px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-black rounded-full uppercase border border-blue-200">USER</span>
                 </div>
                 <div class="flex items-center gap-4">
@@ -169,7 +173,9 @@
                                     <option value="경조사">경조사</option>
                                 </select>
                             </div>
-                            <button type="submit" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-2">신청하기</button>
+                            <button type="submit" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-2">
+                                신청하기
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -315,10 +321,16 @@
                         state.currentUser = res.user;
                         state.requests = res.requests;
                         sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
+                        
+                        // 캐시 정보 최신화
+                        const cachedStr = localStorage.getItem('leavepass_cache');
+                        if (cachedStr) {
+                            const cached = JSON.parse(cachedStr);
+                            localStorage.setItem('leavepass_cache', JSON.stringify({...cached, user: res.user, requests: res.requests}));
+                        }
+
                         renderDashboard();
                     } 
-                    // [수정된 부분] 연속 F5 누를 시 fetch가 abort되어 res가 null로 반환될 때 
-                    // 로그아웃 시켜버리던 로직(else { logout(); })을 삭제했습니다.
                 });
             } else {
                 // 세션이 없으면 즉시 로그인 창 표시
@@ -326,16 +338,64 @@
             }
         })();
 
+        // --- 🚀 즉각적인 로그인 속도를 위한 최적화 로직 ---
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('login-id').value;
             const pw = document.getElementById('login-pw').value;
-            const res = await apiCall('login', { id, pw });
-            if (res && res.user) loginSuccess(res.user, res.requests, true);
+            
+            // 1. 로컬 캐시를 이용한 0.01초 즉시 로그인
+            const cachedData = localStorage.getItem('leavepass_cache');
+            if (cachedData) {
+                const cached = JSON.parse(cachedData);
+                if (cached.id === id && cached.pw === pw) {
+                    // 캐시 정보 일치 시 서버 응답을 기다리지 않고 즉시 화면 넘김
+                    loginSuccess(cached.user, cached.requests, true);
+                    
+                    // 화면 넘김 후 백그라운드에서 조용히 최신 데이터 갱신
+                    apiCall('fetchData', { id: cached.user.id, role: cached.user.role }, false).then(res => {
+                        if (res && res.user) {
+                            state.currentUser = res.user;
+                            state.requests = res.requests;
+                            sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
+                            localStorage.setItem('leavepass_cache', JSON.stringify({ id, pw, user: res.user, requests: res.requests }));
+                            renderDashboard();
+                        }
+                    });
+                    return; // 함수 종료
+                }
+            }
+
+            // 2. 첫 로그인인 경우 -> 검은 화면 대신 버튼 안에서 즉각적인 애니메이션 표시
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>인증 중...';
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-wait');
+
+            // showLoader = false 로 검은 화면 숨기고 통신
+            const res = await apiCall('login', { id, pw }, false); 
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            btn.classList.remove('opacity-80', 'cursor-wait');
+
+            if (res && res.user) {
+                // 최초 로그인 성공 시 캐시 정보 저장
+                localStorage.setItem('leavepass_cache', JSON.stringify({ id, pw, user: res.user, requests: res.requests }));
+                loginSuccess(res.user, res.requests, true);
+            }
         };
 
         document.getElementById('register-form').onsubmit = async (e) => {
             e.preventDefault();
+            
+            // 버튼 로딩 애니메이션 적용
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 중...';
+            btn.disabled = true;
+
             const res = await apiCall('register', {
                 name: document.getElementById('reg-name').value,
                 birth: document.getElementById('reg-birth').value,
@@ -344,7 +404,11 @@
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
                 role: 'user'
-            });
+            }, false); // 검은화면 숨김
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
             if (res) {
                 showSuccessModal(); 
             }
@@ -384,16 +448,31 @@
 
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
+            const start = document.getElementById('leave-start').value;
+            const end = document.getElementById('leave-end').value;
+            if (new Date(start) > new Date(end)) return showAlert('기간을 확인하세요.', 'error');
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
+            btn.disabled = true;
+
             const res = await apiCall('requestLeave', {
                 userId: state.currentUser.id, userName: state.currentUser.name,
-                start: document.getElementById('leave-start').value,
-                end: document.getElementById('leave-end').value,
-                type: document.getElementById('leave-type').value
-            });
-            if (res) { showAlert('신청이 완료되었습니다.', 'success'); refreshData(true); }
+                start, end, type: document.getElementById('leave-type').value
+            }, false); // 검은화면 숨김
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (res) { 
+                showAlert('신청이 완료되었습니다.', 'success'); 
+                document.getElementById('leave-request-form').reset();
+                refreshData(false); // 백그라운드로 갱신
+            }
         };
 
-        // 버튼 클릭 새로고침은 명시적으로 로딩바 표시
+        // 버튼 클릭 새로고침
         async function refreshData(showLoader = true) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, showLoader);
@@ -443,6 +522,7 @@
 
         function logout() { 
             sessionStorage.removeItem('leavepass_user');
+            localStorage.removeItem('leavepass_cache'); // 로그아웃 시 캐시도 안전하게 삭제
             location.reload(); 
         }
     </script>
