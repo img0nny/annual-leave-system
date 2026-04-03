@@ -33,6 +33,18 @@
         </div>
     </div>
 
+    <!-- 회원가입 성공 커스텀 팝업 (모달) -->
+    <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+            <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fas fa-check"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">가입 완료!</h3>
+            <p class="text-slate-500 font-medium mb-8">이제 아이디로 로그인하여<br>연차 관리를 시작하세요.</p>
+            <button onclick="closeSuccessModal()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all">로그인하러 가기</button>
+        </div>
+    </div>
+
     <!-- 알림 컨테이너 -->
     <div id="alert-container" class="fixed top-4 right-4 z-[60] space-y-2"></div>
 
@@ -214,6 +226,17 @@
                 .replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
         }
 
+        // --- 날짜 포맷 변환 (ISO -> YYYY-MM-DD) ---
+        function formatDate(dateStr) {
+            if (!dateStr) return "-";
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr; // 파싱 실패시 원본 반환
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function showAlert(msg, type = 'info') {
             const container = document.getElementById('alert-container');
             const div = document.createElement('div');
@@ -222,6 +245,16 @@
             div.innerHTML = `<span>${msg}</span>`;
             container.appendChild(div);
             setTimeout(() => div.remove(), 4000);
+        }
+
+        // 가입 성공 모달 관련
+        function showSuccessModal() {
+            document.getElementById('success-modal').classList.remove('hidden');
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('success-modal').classList.add('hidden');
+            toggleAuthMode(false); // 모달 닫으면 로그인 창으로 전환
         }
 
         function toggleLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
@@ -259,12 +292,31 @@
             } finally { toggleLoading(false); }
         }
 
+        // --- 새로고침 시 세션 유지 로직 ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            const savedUserStr = sessionStorage.getItem('leavepass_user');
+            if (savedUserStr) {
+                try {
+                    const savedUser = JSON.parse(savedUserStr);
+                    // 세션의 유저 정보를 바탕으로 최신 데이터 로드
+                    const res = await apiCall('fetchData', { id: savedUser.id, role: savedUser.role });
+                    if (res && res.user) {
+                        loginSuccess(res.user, res.requests, false); // false = 알림 메시지 생략
+                    } else {
+                        sessionStorage.removeItem('leavepass_user');
+                    }
+                } catch(e) {
+                    sessionStorage.removeItem('leavepass_user');
+                }
+            }
+        });
+
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('login-id').value;
             const pw = document.getElementById('login-pw').value;
             const res = await apiCall('login', { id, pw });
-            if (res && res.user) loginSuccess(res.user, res.requests);
+            if (res && res.user) loginSuccess(res.user, res.requests, true);
         };
 
         document.getElementById('register-form').onsubmit = async (e) => {
@@ -278,12 +330,19 @@
                 pw: document.getElementById('reg-pw').value,
                 role: 'user'
             });
-            if (res) { showAlert('가입 완료! 로그인 해주세요.', 'success'); toggleAuthMode(false); }
+            if (res) {
+                // 기존의 showAlert 대신 디자인된 모달 띄우기
+                showSuccessModal(); 
+            }
         };
 
-        function loginSuccess(user, requests = []) {
+        function loginSuccess(user, requests = [], showWelcomeMsg = true) {
             state.currentUser = user;
             state.requests = requests;
+            
+            // 세션 스토리지에 로그인 정보 저장
+            sessionStorage.setItem('leavepass_user', JSON.stringify(user));
+
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
             document.getElementById('welcome-msg').innerText = `${user.name} 님`;
@@ -293,7 +352,10 @@
             document.getElementById('user-request-card').classList.toggle('hidden', isAdmin);
             document.getElementById('user-history').classList.toggle('hidden', isAdmin);
             renderDashboard();
-            showAlert(`${user.name}님 환영합니다!`, 'success');
+
+            if (showWelcomeMsg) {
+                showAlert(`${user.name}님 환영합니다!`, 'success');
+            }
         }
 
         document.getElementById('leave-request-form').onsubmit = async (e) => {
@@ -322,20 +384,39 @@
             if(!u) return;
             document.getElementById('total-leave').innerText = u.total;
             document.getElementById('remaining-leave').innerText = (u.total - (u.used || 0)).toFixed(1);
-            const hist = document.getElementById('history-body'); hist.innerHTML = '';
+            
+            const hist = document.getElementById('history-body'); 
+            hist.innerHTML = '';
+            
             state.requests.forEach(req => {
                 if (u.role === 'user' && req.userId !== u.id) return;
                 const color = req.status === '승인' ? 'bg-emerald-100 text-emerald-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
-                hist.innerHTML += `<tr class="hover:bg-slate-50 transition-all font-medium"><td class="p-5 text-slate-700 text-sm">${req.start} ~ ${req.end}</td><td class="p-5 text-xs font-black text-slate-400">${req.type}</td><td class="p-5 text-right"><span class="px-3 py-1.5 rounded-full text-[10px] font-black ${color}">${req.status}</span></td></tr>`;
+                
+                // 날짜 포맷 적용 (YYYY-MM-DD)
+                const formattedStart = formatDate(req.start);
+                const formattedEnd = formatDate(req.end);
+
+                hist.innerHTML += `<tr class="hover:bg-slate-50 transition-all font-medium"><td class="p-5 text-slate-700 text-[13px] tracking-tight">${formattedStart} ~ ${formattedEnd}</td><td class="p-5 text-xs font-black text-slate-400">${req.type}</td><td class="p-5 text-right"><span class="px-3 py-1.5 rounded-full text-[10px] font-black ${color}">${req.status}</span></td></tr>`;
             });
+            
             if (u.role === 'admin') {
-                const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
+                const adminBody = document.getElementById('admin-queue-body'); 
+                adminBody.innerHTML = '';
                 state.requests.filter(r => r.status === '대기').forEach(req => {
-                    adminBody.innerHTML += `<div class="p-6 flex flex-col md:flex-row justify-between items-center gap-4"><div><div class="flex items-center gap-2"><span class="font-black text-slate-800">${req.userName}</span><span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-black">${req.type}</span></div><div class="text-xs text-slate-500 mt-1 font-bold">${req.start} ~ ${req.end}</div></div><div class="flex gap-2"><button onclick="updateStatus('${req.id}', '승인')" class="px-4 py-2 bg-emerald-500 text-white rounded-xl font-black text-xs shadow-lg">승인</button><button onclick="updateStatus('${req.id}', '반려')" class="px-4 py-2 bg-rose-500 text-white rounded-xl font-black text-xs shadow-lg">반려</button></div></div>`;
+                    
+                    // 관리자 센터 날짜 포맷 적용
+                    const formattedStart = formatDate(req.start);
+                    const formattedEnd = formatDate(req.end);
+
+                    adminBody.innerHTML += `<div class="p-6 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-slate-50 transition-all border-b border-slate-50"><div><div class="flex items-center gap-2"><span class="font-black text-slate-800">${req.userName}</span><span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-black">${req.type}</span></div><div class="text-xs text-slate-500 mt-1 font-bold">${formattedStart} ~ ${formattedEnd}</div></div><div class="flex gap-2"><button onclick="updateStatus('${req.id}', '승인')" class="px-4 py-2 bg-emerald-500 text-white rounded-xl font-black text-xs shadow-lg">승인</button><button onclick="updateStatus('${req.id}', '반려')" class="px-4 py-2 bg-rose-500 text-white rounded-xl font-black text-xs shadow-lg">반려</button></div></div>`;
                 });
             }
         }
-        function logout() { location.reload(); }
+
+        function logout() { 
+            sessionStorage.removeItem('leavepass_user'); // 로그아웃 시 세션 초기화
+            location.reload(); 
+        }
     </script>
 </body>
 </html>
