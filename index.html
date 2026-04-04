@@ -2,137 +2,146 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>스마트 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        html, body { overflow-x: hidden; font-family: 'Inter', sans-serif; background-color: transparent; }
         .glass-morphism { 
             background: rgba(255, 255, 255, 0.95); 
             backdrop-filter: blur(10px); 
             border: 1px solid rgba(255, 255, 255, 0.2); 
         }
         .input-field { 
-            @apply w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium; 
+            @apply w-full mt-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium; 
         }
         .label-text { 
-            @apply block text-xs font-bold text-slate-600 ml-1 mb-1; 
+            @apply block text-[13px] font-bold text-slate-700 ml-1 mb-1; 
         }
         input::placeholder { color: #cbd5e1; }
+        td, th { white-space: nowrap; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen bg-[#f8fafc]">
 
-    <!-- 로딩 스피너 (연타 방지용 블로킹 오버레이) -->
+    <!-- 로딩 스피너 (연타 방지) -->
     <div id="loading" class="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-300">
         <div class="flex flex-col items-center gap-4 bg-white/10 p-8 rounded-3xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
-            <p class="text-white font-bold text-sm tracking-wide">잠시만 기다려주세요.</p>
+            <p class="text-white font-bold text-sm tracking-wide">서버에 안전하게 기록 중입니다...</p>
         </div>
     </div>
 
-    <!-- 로그인 실패 커스텀 팝업 -->
+    <!-- 로그인 실패 팝업 -->
     <div id="login-error-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
-            <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl sm:text-3xl">
                 <i class="fas fa-exclamation"></i>
             </div>
-            <h3 class="text-2xl font-black text-slate-800 mb-2">로그인 실패</h3>
-            <p class="text-slate-500 font-medium mb-8">아이디 또는 비밀번호가<br>일치하지 않습니다.</p>
-            <button onclick="closeLoginErrorModal()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all">다시 입력하기</button>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-800 mb-2">로그인 실패</h3>
+            <p class="text-sm sm:text-base text-slate-500 font-medium mb-8">아이디 또는 비밀번호가<br>일치하지 않습니다.</p>
+            <button onclick="closeLoginErrorModal()" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-2xl font-black hover:bg-black transition-all">다시 입력하기</button>
         </div>
     </div>
 
-    <!-- 회원가입 성공 커스텀 팝업 -->
+    <!-- 가입 성공 팝업 -->
     <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
-            <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl sm:text-3xl">
                 <i class="fas fa-check"></i>
             </div>
-            <h3 class="text-2xl font-black text-slate-800 mb-2">가입 완료!</h3>
-            <p class="text-slate-500 font-medium mb-8">이제 아이디로 로그인하여<br>연차 관리를 시작하세요.</p>
-            <button onclick="closeSuccessModal()" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all">로그인하러 가기</button>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-800 mb-2">가입 완료!</h3>
+            <p class="text-sm sm:text-base text-slate-500 font-medium mb-8">이제 아이디로 로그인하여<br>연차 관리를 시작하세요.</p>
+            <button onclick="closeSuccessModal()" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-2xl font-black hover:bg-black transition-all">로그인하러 가기</button>
         </div>
     </div>
 
-    <!-- 삭제 확인 커스텀 팝업 -->
+    <!-- 삭제 확인 팝업 -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
-            <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl sm:text-3xl">
                 <i class="fas fa-trash-alt"></i>
             </div>
-            <h3 class="text-2xl font-black text-slate-800 mb-2">정말 삭제할까요?</h3>
-            <p class="text-slate-500 font-medium mb-8">해당 연차 내역이 영구적으로 삭제됩니다.<br>(승인건 삭제 시 연차 일수 자동 복구)</p>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-800 mb-2">정말 삭제할까요?</h3>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mb-8">해당 연차 내역이 영구적으로 삭제됩니다.<br>(승인건 삭제 시 연차 일수 자동 복구)</p>
             <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-4 rounded-2xl font-black hover:bg-slate-200 transition-all">취소</button>
-                <button id="confirm-delete-btn" class="flex-1 bg-rose-500 text-white p-4 rounded-2xl font-black hover:bg-rose-600 transition-all">삭제하기</button>
+                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 sm:p-4 rounded-2xl font-black hover:bg-slate-200 transition-all text-sm sm:text-base">취소</button>
+                <button id="confirm-delete-btn" class="flex-1 bg-rose-500 text-white p-3.5 sm:p-4 rounded-2xl font-black hover:bg-rose-600 transition-all text-sm sm:text-base">삭제하기</button>
             </div>
         </div>
     </div>
 
     <!-- 알림 컨테이너 -->
-    <div id="alert-container" class="fixed top-4 right-4 z-[60] space-y-2"></div>
+    <div id="alert-container" class="fixed top-4 right-0 left-0 sm:left-auto sm:right-4 z-[60] flex flex-col items-center sm:items-end px-4 space-y-2 pointer-events-none"></div>
 
-    <div id="app" class="max-w-7xl mx-auto px-4 py-8">
+    <div id="app" class="max-w-7xl mx-auto px-4 py-6 sm:py-8 h-full">
         <!-- 인증 섹션 -->
-        <div id="auth-section" class="max-w-md mx-auto mt-10 hidden">
-            <div class="glass-morphism p-8 rounded-3xl shadow-2xl border border-white">
-                <div class="text-center mb-8">
-                    <h1 class="text-4xl font-black text-blue-600 tracking-tighter">서울더리본치과</h1>
-                    <p class="text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
+        <div id="auth-section" class="max-w-md w-full mx-auto min-h-[60vh] flex flex-col justify-center hidden">
+            <div class="glass-morphism p-6 sm:p-8 rounded-[2rem] shadow-2xl border border-white">
+                <div class="text-center mb-6 sm:mb-8">
+                    <h1 class="text-3xl sm:text-4xl font-black text-blue-600 tracking-tighter">서울더리본치과</h1>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
                 </div>
 
                 <!-- 로그인 폼 -->
-                <form id="login-form" class="space-y-4">
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">아이디</label>
-                        <input type="text" id="login-id" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="아이디를 입력하세요">
+                <form id="login-form" class="space-y-3 sm:space-y-4">
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="w-16 sm:w-20 text-xs sm:text-sm font-bold text-slate-700 shrink-0 text-left">아이디</label>
+                        <input type="text" id="login-id" required class="w-full p-3 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="아이디 입력">
                     </div>
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">비밀번호</label>
-                        <input type="password" id="login-pw" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="••••••••">
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="w-16 sm:w-20 text-xs sm:text-sm font-bold text-slate-700 shrink-0 text-left">비밀번호</label>
+                        <input type="password" id="login-pw" required class="w-full p-3 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="••••••••">
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg mt-2">
+                    <button type="submit" class="w-full bg-blue-600 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg mt-4 text-sm sm:text-base">
                         로그인
                     </button>
-                    <p class="text-center text-sm text-slate-500 mt-6 font-medium">
+                    <p class="text-center text-xs sm:text-sm text-slate-500 mt-5 font-medium">
                         계정이 없으신가요? <a href="#" onclick="toggleAuthMode(true)" class="text-blue-600 font-black hover:underline cursor-pointer">회원가입</a>
                     </p>
                 </form>
 
-                <!-- 회원가입 폼 (레이아웃 교정됨) -->
+                <!-- 회원가입 폼 -->
                 <form id="register-form" class="space-y-4 hidden">
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">이름</label>
-                        <input type="text" id="reg-name" required maxlength="3" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="3자 이내">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
+                        <div>
+                            <label class="label-text">이름</label>
+                            <input type="text" id="reg-name" required maxlength="3" class="input-field" placeholder="예: 홍길동">
+                        </div>
+                        <div>
+                            <label class="label-text">생년월일</label>
+                            <input type="text" id="reg-birth" required maxlength="10" class="input-field" placeholder="1990-01-01" oninput="autoHyphenDate(this)">
+                        </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">생년월일</label>
-                        <input type="text" id="reg-birth" required maxlength="10" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="1990-01-01" oninput="autoHyphenDate(this)">
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">휴대폰 번호</label>
-                        <input type="tel" id="reg-phone" required maxlength="13" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)">
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">입사일</label>
-                        <input type="text" id="reg-join" required maxlength="10" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="2024-01-01" oninput="autoHyphenDate(this)">
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">아이디</label>
-                        <input type="text" id="reg-id" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="사용할 ID">
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <label class="w-20 text-sm font-bold text-slate-700 shrink-0 text-left">비밀번호</label>
-                        <input type="password" id="reg-pw" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="••••••••">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
+                        <div>
+                            <label class="label-text">휴대폰 번호</label>
+                            <input type="tel" id="reg-phone" required maxlength="13" class="input-field" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)">
+                        </div>
+                        <div>
+                            <label class="label-text">입사일</label>
+                            <input type="text" id="reg-join" required maxlength="10" class="input-field" placeholder="2024-01-01" oninput="autoHyphenDate(this)">
+                        </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
+                        <div>
+                            <label class="label-text">사용할 아이디 (ID)</label>
+                            <input type="text" id="reg-id" required class="input-field" placeholder="영문/숫자 입력">
+                        </div>
+                        <div>
+                            <label class="label-text">비밀번호</label>
+                            <input type="password" id="reg-pw" required class="input-field" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-600 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-4 text-sm sm:text-base">
                         가입 완료
                     </button>
-                    <p class="text-center text-sm text-slate-500 mt-6 font-medium">
+                    <p class="text-center text-xs sm:text-sm text-slate-500 mt-5 font-medium">
                         이미 계정이 있나요? <a href="#" onclick="toggleAuthMode(false)" class="text-blue-600 font-black hover:underline cursor-pointer">로그인</a>
                     </p>
                 </form>
@@ -141,69 +150,69 @@
 
         <!-- 메인 섹션 -->
         <div id="main-section" class="hidden">
-            <nav class="flex justify-between items-center mb-8 glass-morphism p-5 rounded-3xl shadow-sm border border-white">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
-                        <i class="fas fa-calendar-check text-lg"></i>
+            <!-- 반응형 네비게이션 -->
+            <nav class="flex justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-white">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="bg-blue-600 text-white p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg">
+                        <i class="fas fa-calendar-check text-base sm:text-lg"></i>
                     </div>
-                    <span class="text-2xl font-black text-slate-800 tracking-tighter">서울더리본치과</span>
-                    <span id="user-badge" class="ml-2 px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-black rounded-full uppercase border border-blue-200">USER</span>
+                    <span class="text-lg sm:text-2xl font-black text-slate-800 tracking-tighter hidden sm:inline">서울더리본치과</span>
+                    <span class="text-lg font-black text-slate-800 tracking-tighter sm:hidden">연차 관리</span>
+                    <span id="user-badge" class="ml-1 sm:ml-2 px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-100 text-blue-600 text-[9px] sm:text-[10px] font-black rounded-full uppercase border border-blue-200">USER</span>
                 </div>
-                <div class="flex items-center gap-4">
-                    <span id="welcome-msg" class="text-slate-700 font-bold hidden md:block"></span>
-                    <button onclick="logout()" class="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
-                        <i class="fas fa-sign-out-alt text-xl"></i>
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <span id="welcome-msg" class="text-xs sm:text-sm text-slate-700 font-bold hidden md:block"></span>
+                    <button onclick="logout()" class="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl sm:rounded-2xl transition-all">
+                        <i class="fas fa-sign-out-alt text-lg sm:text-xl"></i>
                     </button>
                 </div>
             </nav>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 <!-- 통계 및 연차 신청 (좌측 1단) -->
                 <div class="space-y-6">
-                    <div class="glass-morphism p-8 rounded-3xl shadow-sm border border-white border-l-8 border-l-blue-500">
-                        <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
+                    <div class="glass-morphism p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-white border-l-8 border-l-blue-500">
+                        <p class="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
                         <div class="flex items-baseline gap-2 mt-2">
-                            <h2 id="remaining-leave" class="text-5xl font-black text-slate-800">0</h2>
-                            <span class="text-slate-400 font-bold text-lg">/ <span id="total-leave">15</span>일</span>
+                            <h2 id="remaining-leave" class="text-4xl sm:text-5xl font-black text-slate-800">0</h2>
+                            <span class="text-slate-400 font-bold text-base sm:text-lg">/ <span id="total-leave">15</span>일</span>
                         </div>
-                        <!-- 시간차 사용 시 직관적으로 표기해주는 세부 알림 -->
-                        <div id="remaining-detail" class="hidden mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 text-sm font-black rounded-lg">
+                        <div id="remaining-detail" class="hidden mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 text-xs sm:text-sm font-black rounded-lg">
                             <i class="fas fa-clock"></i> <span id="remaining-detail-text"></span>
                         </div>
                     </div>
 
-                    <div id="user-request-card" class="glass-morphism p-6 rounded-3xl shadow-sm border border-white">
-                        <h3 class="text-lg font-black text-slate-800 mb-5 flex items-center gap-2">
-                            <i class="fas fa-paper-plane text-blue-500"></i> 연차 신청
+                    <!-- 🚀 수정된 연차 신청 폼 -->
+                    <div id="user-request-card" class="glass-morphism p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white">
+                        <h3 class="text-base sm:text-lg font-black text-slate-800 mb-4 sm:mb-5 flex items-center gap-2">
+                            <i class="fas fa-paper-plane text-blue-500"></i> 연차/휴가 신청
                         </h3>
-                        <form id="leave-request-form" class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
+                        <form id="leave-request-form" class="space-y-3 sm:space-y-4">
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
                                 <div>
-                                    <label class="label-text">시작일</label>
-                                    <input type="date" id="leave-start" required class="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label class="label-text">신청일</label>
+                                    <input type="text" id="req-date" readonly class="input-field mt-1 p-2.5 sm:p-3 bg-slate-100 text-slate-500 cursor-not-allowed font-bold">
                                 </div>
                                 <div>
-                                    <label class="label-text">종료일</label>
-                                    <input type="date" id="leave-end" required class="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label class="label-text">연차 신청 일자</label>
+                                    <input type="date" id="leave-date" required class="input-field mt-1 p-2.5 sm:p-3">
                                 </div>
                             </div>
                             
-                            <!-- 유형 선택 -->
                             <div>
                                 <label class="label-text">유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="연차">일반 연차</option>
-                                    <option value="반차">반차 (0.5일)</option>
+                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field mt-1 p-2.5 sm:p-3 font-bold">
+                                    <option value="일반 연차">일반 연차 (1일)</option>
+                                    <option value="반차 (5시간)">반차 (5시간)</option>
+                                    <option value="반차 (3시간)">반차 (3시간)</option>
                                     <option value="시간차">시간차 (1~7시간)</option>
-                                    <option value="병가">병가 (차감없음)</option>
-                                    <option value="경조사">경조사 (차감없음)</option>
+                                    <option value="무급 휴가">무급 휴가 (차감없음)</option>
                                 </select>
                             </div>
 
-                            <!-- 시간차 선택 시 동적으로 나타나는 UI -->
                             <div id="hourly-container" class="hidden animate-in slide-in-from-top-2 duration-300">
                                 <label class="label-text">사용 시간</label>
-                                <select id="leave-hours" class="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                                <select id="leave-hours" class="input-field mt-1 p-2.5 sm:p-3 font-bold">
                                     <option value="1">1시간 (0.125일)</option>
                                     <option value="2">2시간 (0.25일)</option>
                                     <option value="3">3시간 (0.375일)</option>
@@ -214,7 +223,17 @@
                                 </select>
                             </div>
 
-                            <button type="submit" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-2">
+                            <div>
+                                <label class="label-text">사유</label>
+                                <input type="text" id="leave-reason" required class="input-field mt-1 p-2.5 sm:p-3" placeholder="구체적인 사유를 입력하세요">
+                            </div>
+
+                            <div>
+                                <label class="label-text">인수인계</label>
+                                <input type="text" id="leave-handover" required class="input-field mt-1 p-2.5 sm:p-3" placeholder="인수자 및 인계사항 입력 (없을 시 '없음')">
+                            </div>
+
+                            <button type="submit" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-4 text-sm sm:text-base">
                                 신청하기
                             </button>
                         </form>
@@ -225,20 +244,20 @@
                 <div class="lg:col-span-2 space-y-6">
                     
                     <!-- 일반 사원용: 본인 연차 내역 -->
-                    <div id="user-history" class="glass-morphism rounded-3xl shadow-sm border border-white overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
-                            <h3 class="text-lg font-black text-slate-800">내 연차 내역</h3>
-                            <button onclick="refreshData(true)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all">
+                    <div id="user-history" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white overflow-hidden">
+                        <div class="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                            <h3 class="text-base sm:text-lg font-black text-slate-800">내 연차 내역</h3>
+                            <button onclick="refreshData(true)" class="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black hover:bg-blue-100 transition-all flex items-center">
                                 <i class="fas fa-sync-alt mr-1"></i> 새로고침
                             </button>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left">
+                            <table class="w-full text-left min-w-[500px]">
                                 <thead>
                                     <tr class="bg-slate-50/80">
-                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">기간</th>
-                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">유형</th>
-                                        <th class="p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">상태</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">신청일 / 휴가일자</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">유형 / 상세사유</th>
+                                        <th class="p-3 sm:p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">결재 상태</th>
                                     </tr>
                                 </thead>
                                 <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
@@ -247,24 +266,24 @@
                     </div>
 
                     <!-- 관리자 전용: 전체 관리 데스크 -->
-                    <div id="admin-panel" class="hidden glass-morphism rounded-3xl shadow-sm border border-white overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 bg-white/50 flex justify-between items-center">
-                            <h3 class="text-lg font-black text-slate-800">
-                                <i class="fas fa-users-cog text-blue-600 mr-2"></i>전체 연차 관리 데스크
+                    <div id="admin-panel" class="hidden glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white overflow-hidden">
+                        <div class="p-4 sm:p-6 border-b border-slate-100 bg-white/50 flex justify-between items-center flex-wrap gap-2">
+                            <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center">
+                                <i class="fas fa-users-cog text-blue-600 mr-2"></i>전체 관리 데스크
                             </h3>
-                            <button onclick="refreshData(true)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all">
+                            <button onclick="refreshData(true)" class="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black hover:bg-blue-100 transition-all flex items-center">
                                 <i class="fas fa-sync-alt mr-1"></i> 데이터 갱신
                             </button>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left">
+                            <table class="w-full text-left min-w-[700px]">
                                 <thead>
                                     <tr class="bg-slate-50/80">
-                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">신청자</th>
-                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">기간</th>
-                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">구분</th>
-                                        <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">상태</th>
-                                        <th class="p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">신청자</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">휴가일자 / 유형</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">사유 / 인수인계</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">결재 상태</th>
+                                        <th class="p-3 sm:p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">관리 액션</th>
                                     </tr>
                                 </thead>
                                 <tbody id="admin-queue-body" class="divide-y divide-slate-100"></tbody>
@@ -281,14 +300,13 @@
 
         let state = { currentUser: null, requests: [] };
 
-        // --- 유틸리티 ---
-        function autoHyphenPhone(target) {
-            target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
-        }
+        // 오늘 날짜 기본 세팅
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('req-date').value = formatDate(new Date());
+        });
 
-        function autoHyphenDate(target) {
-            target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, "");
-        }
+        function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
+        function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
 
         function formatDate(dateStr) {
             if (!dateStr) return "-";
@@ -300,20 +318,16 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 프론트엔드 연차 차감 일수 낙관적 계산 헬퍼
-        function getDeductionDaysLocally(start, end, type) {
-            if (type === '반차') return 0.5;
+        // 💡 수정된 차감 헬퍼
+        function getDeductionDaysLocally(type) {
+            if (type.includes('무급 휴가')) return 0;
+            if (type.includes('반차 (5시간)')) return 5 / 8;
+            if (type.includes('반차 (3시간)')) return 3 / 8;
             let hourMatch = type.match(/시간차\s*\((\d+)시간\)/);
             if (hourMatch) return parseInt(hourMatch[1], 10) / 8;
-            if (type === '병가' || type === '경조사') return 0;
-            const st = new Date(start);
-            const en = new Date(end);
-            st.setHours(0,0,0,0);
-            en.setHours(0,0,0,0);
-            return Math.max(0, (en - st) / (1000 * 60 * 60 * 24) + 1);
+            return 1; // 일반 연차
         }
         
-        // 💡 입사일 기준 연차 개수 계산 로직
         function calculateInitialLeave(joinDateStr) {
             if (!joinDateStr) return 15;
             const joinParts = joinDateStr.split('-');
@@ -326,16 +340,13 @@
             months -= joinDate.getMonth();
             months += today.getMonth();
 
-            // 아직 입사일의 '일(day)'이 지나지 않았다면 개월수에서 1 차감
             if (today.getDate() < joinDate.getDate()) {
                 months--;
             }
 
             if (months < 12) {
-                // 1년 미만: 만근한 개월 수 만큼 (최대 11개)
                 return Math.max(0, months); 
             } else {
-                // 1년 이상: 15개
                 return 15; 
             }
         }
@@ -344,43 +355,24 @@
             const container = document.getElementById('alert-container');
             const div = document.createElement('div');
             const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
-            div.className = `${colors[type]} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in font-bold text-sm`;
+            div.className = `${colors[type]} text-white px-5 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-3 animate-in fade-in slide-in-from-top-4 font-bold text-xs sm:text-sm mb-2 pointer-events-auto`;
             div.innerHTML = `<span>${msg}</span>`;
             container.appendChild(div);
-            setTimeout(() => div.remove(), 4000);
+            setTimeout(() => {
+                div.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
         }
 
-        // --- 연차 유형 선택 (반차/시간차 UI 동기화) ---
         function handleLeaveTypeChange() {
             const type = document.getElementById('leave-type').value;
             const hourlyContainer = document.getElementById('hourly-container');
-            const endInput = document.getElementById('leave-end');
-            const startInput = document.getElementById('leave-start');
-
             if (type === '시간차') {
                 hourlyContainer.classList.remove('hidden');
-                endInput.value = startInput.value; 
-                endInput.readOnly = true;
-                endInput.classList.add('bg-slate-100', 'text-slate-400');
-            } else if (type === '반차') {
-                hourlyContainer.classList.add('hidden');
-                endInput.value = startInput.value; 
-                endInput.readOnly = true;
-                endInput.classList.add('bg-slate-100', 'text-slate-400');
             } else {
                 hourlyContainer.classList.add('hidden');
-                endInput.readOnly = false;
-                endInput.classList.remove('bg-slate-100', 'text-slate-400');
             }
         }
-
-        // 시작일 변경 시 반차/시간차면 종료일도 같이 변경되게 처리
-        document.getElementById('leave-start').addEventListener('change', function() {
-            const type = document.getElementById('leave-type').value;
-            if (type === '반차' || type === '시간차') {
-                document.getElementById('leave-end').value = this.value;
-            }
-        });
 
         // --- 모달 관리 ---
         function showLoginErrorModal() { document.getElementById('login-error-modal').classList.remove('hidden'); }
@@ -389,7 +381,6 @@
             document.getElementById('login-pw').value = '';
             document.getElementById('login-pw').focus();
         }
-
         function showSuccessModal() { document.getElementById('success-modal').classList.remove('hidden'); }
         function closeSuccessModal() {
             document.getElementById('success-modal').classList.add('hidden');
@@ -406,34 +397,30 @@
             document.getElementById('confirm-modal').classList.add('hidden');
         }
 
-        // 🚀 데이터 조작(삭제) 실행 시 블로킹 로딩 적용 (연타 방지)
         document.getElementById('confirm-delete-btn').onclick = async () => {
             if (!deleteTargetId) return;
             const targetId = deleteTargetId;
             closeConfirmModal();
 
-            // 즉각 화면에서 삭제 반영 (낙관적 UI)
             const targetIndex = state.requests.findIndex(r => r.id == targetId);
             let backupReq = null;
             if (targetIndex > -1) {
                 backupReq = state.requests[targetIndex];
                 state.requests.splice(targetIndex, 1);
                 
-                // 내 연차인 경우 잔여 연차 즉각 복구
-                if (backupReq.status === '승인' && backupReq.userId === state.currentUser.id) {
-                    const diff = getDeductionDaysLocally(backupReq.start, backupReq.end, backupReq.type);
+                // 최종 승인 상태에서만 연차 복구
+                if (backupReq.status === '최종 승인' && backupReq.userId === state.currentUser.id) {
+                    const diff = getDeductionDaysLocally(backupReq.type);
                     state.currentUser.used = (parseFloat(state.currentUser.used || 0) - diff).toString();
                 }
                 renderDashboard();
             }
 
-            // 서버 반영 (중복 클릭 방지를 위해 showLoader = true 강제 적용)
             const res = await apiCall('deleteRequest', { requestId: targetId }, true);
             if (res) { 
                 showAlert('성공적으로 삭제되었습니다.', 'success'); 
                 refreshData(false); 
             } else {
-                // 실패 시 화면 원상복구
                 if (backupReq) state.requests.splice(targetIndex, 0, backupReq);
                 renderDashboard();
             }
@@ -450,40 +437,30 @@
             if (showLoader) toggleLoading(true);
             try {
                 const response = await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'cors',
+                    method: 'POST', mode: 'cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action, ...data })
                 });
-
                 if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
                 const result = await response.json();
                 if (result.status === 'error') throw new Error(result.message);
                 return result;
             } catch (err) {
-                console.error("통신 오류 상세:", err);
-                let errorMsg = err.message;
-                if (err.message === 'Failed to fetch') {
-                    errorMsg = "서버 응답 없음 (CORS/배포 권한 확인 필요).";
-                }
-                
+                let errorMsg = err.message === 'Failed to fetch' ? "서버 응답이 없습니다. 네트워크를 확인하세요." : err.message;
                 if (action === 'login' && errorMsg.includes('일치하지 않습니다')) {
-                    showLoginErrorModal();
-                    return null;
+                    showLoginErrorModal(); return null;
                 }
-
-                if (showLoader) showAlert(`서버 오류: ${errorMsg}`, 'error');
+                if (showLoader) showAlert(`오류: ${errorMsg}`, 'error');
                 return null;
             } finally { 
                 if (showLoader) toggleLoading(false); 
             }
         }
 
-        // --- 세션 체크 (F5 즉시 반영) ---
+        // --- 세션 체크 ---
         (function checkSessionAndInit() {
             const savedDataStr = sessionStorage.getItem('leavepass_user');
             let user = null; let requests = [];
-
             if (savedDataStr) {
                 try {
                     const parsed = JSON.parse(savedDataStr);
@@ -496,15 +473,9 @@
                 loginSuccess(user, requests, false);
                 apiCall('fetchData', { id: user.id, role: user.role }, false).then(res => {
                     if (res && res.user) {
-                        state.currentUser = res.user;
-                        state.requests = res.requests;
+                        state.currentUser = res.user; state.requests = res.requests;
                         sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
-                        
-                        const cachedStr = localStorage.getItem('leavepass_cache');
-                        if (cachedStr) {
-                            const cached = JSON.parse(cachedStr);
-                            localStorage.setItem('leavepass_cache', JSON.stringify({...cached, user: res.user, requests: res.requests}));
-                        }
+                        localStorage.setItem('leavepass_cache', JSON.stringify({ id: user.id, pw: 'saved', user: res.user, requests: res.requests }));
                         renderDashboard();
                     } 
                 });
@@ -541,7 +512,6 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>인증 중...';
             btn.disabled = true; btn.classList.add('opacity-80', 'cursor-wait');
 
-            // 로그인 연타 방지를 위해 블로킹 로딩(true) 사용
             const res = await apiCall('login', { id, pw }, true); 
             
             btn.innerHTML = originalText; btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-wait');
@@ -552,7 +522,6 @@
             }
         };
 
-        // 💡 회원가입 로직 (연차 자동 계산 연동)
         document.getElementById('register-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -561,9 +530,8 @@
             btn.disabled = true;
 
             const joinDateValue = document.getElementById('reg-join').value;
-            const initialTotalLeave = calculateInitialLeave(joinDateValue); // 연차 계산
+            const initialTotalLeave = calculateInitialLeave(joinDateValue);
 
-            // 가입 버튼 연타 방지를 위해 블로킹 로딩(true) 사용
             const res = await apiCall('register', {
                 name: document.getElementById('reg-name').value,
                 birth: document.getElementById('reg-birth').value,
@@ -572,7 +540,7 @@
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
                 role: 'user',
-                totalLeave: initialTotalLeave // 👈 계산된 연차 개수를 서버로 전송
+                totalLeave: initialTotalLeave
             }, true);
 
             btn.innerHTML = originalText; btn.disabled = false;
@@ -598,7 +566,6 @@
             document.getElementById('user-badge').innerText = user.role.toUpperCase();
             
             const isAdmin = user.role === 'admin';
-            
             if(isAdmin) {
                 document.getElementById('user-history').classList.add('hidden');
                 document.getElementById('admin-panel').classList.remove('hidden');
@@ -606,16 +573,16 @@
                 document.getElementById('user-history').classList.remove('hidden');
                 document.getElementById('admin-panel').classList.add('hidden');
             }
-            
             renderDashboard();
         }
 
-        // 🚀 데이터 조작(연차 신청) 실행 시 블로킹 로딩 적용 (연타 방지)
+        // 🚀 낙관적 연차 신청
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
-            const start = document.getElementById('leave-start').value;
-            const end = document.getElementById('leave-end').value;
-            if (new Date(start) > new Date(end)) return showAlert('기간을 확인하세요.', 'error');
+            const requestDate = document.getElementById('req-date').value;
+            const leaveDate = document.getElementById('leave-date').value;
+            const reason = document.getElementById('leave-reason').value;
+            const handover = document.getElementById('leave-handover').value;
             
             let leaveType = document.getElementById('leave-type').value;
             if (leaveType === '시간차') {
@@ -623,16 +590,11 @@
                 leaveType = `시간차 (${hours}시간)`;
             }
 
-            // 화면에 즉시 등록 (낙관적 UI)
             const tempId = 'temp-' + Date.now();
             const newReq = {
-                id: tempId,
-                userId: state.currentUser.id,
-                userName: state.currentUser.name,
-                start: start,
-                end: end,
-                type: leaveType,
-                status: '대기'
+                id: tempId, userId: state.currentUser.id, userName: state.currentUser.name,
+                requestDate: requestDate, leaveDate: leaveDate, type: leaveType, 
+                reason: reason, handover: handover, status: '대기'
             };
             state.requests.unshift(newReq);
             renderDashboard();
@@ -642,10 +604,9 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
             btn.disabled = true;
 
-            // 서버 반영 (중복 클릭 방지를 위해 showLoader = true 강제 적용)
             const res = await apiCall('requestLeave', {
                 userId: state.currentUser.id, userName: state.currentUser.name,
-                start, end, type: leaveType
+                requestDate, leaveDate, type: leaveType, reason, handover
             }, true);
 
             btn.innerHTML = originalText; btn.disabled = false;
@@ -653,10 +614,10 @@
             if (res) { 
                 showAlert('신청이 완료되었습니다.', 'success'); 
                 document.getElementById('leave-request-form').reset(); 
+                document.getElementById('req-date').value = formatDate(new Date()); // 신청일 재세팅
                 handleLeaveTypeChange(); 
-                refreshData(false); // 최신 데이터 백그라운드 동기화
+                refreshData(false); 
             } else {
-                // 실패 시 화면 원상복구
                 state.requests = state.requests.filter(r => r.id !== tempId);
                 renderDashboard();
             }
@@ -672,34 +633,32 @@
             }
         }
 
-        // 🚀 데이터 조작(관리자 상태 변경) 실행 시 블로킹 로딩 적용 (연타 방지)
+        // 🚀 관리자 2차 승인 상태 변경
         async function updateStatus(reqId, status) {
             const targetReq = state.requests.find(r => r.id == reqId);
             let originalStatus = '';
             
             if (targetReq) {
-                // 화면 즉시 반영 (낙관적 UI)
                 originalStatus = targetReq.status;
                 targetReq.status = status;
                 
+                // 최종 승인될 때만 연차 차감
                 if (targetReq.userId === state.currentUser.id) {
-                    const diff = getDeductionDaysLocally(targetReq.start, targetReq.end, targetReq.type);
-                    if (originalStatus !== '승인' && status === '승인') {
+                    const diff = getDeductionDaysLocally(targetReq.type);
+                    if (originalStatus !== '최종 승인' && status === '최종 승인') {
                         state.currentUser.used = (parseFloat(state.currentUser.used || 0) + diff).toString();
-                    } else if (originalStatus === '승인' && status !== '승인') {
+                    } else if (originalStatus === '최종 승인' && status !== '최종 승인') {
                         state.currentUser.used = (parseFloat(state.currentUser.used || 0) - diff).toString();
                     }
                 }
                 renderDashboard();
             }
 
-            // 서버 반영 (중복 클릭 방지를 위해 showLoader = true 강제 적용)
             const res = await apiCall('updateStatus', { requestId: reqId, status }, true);
             if (res) { 
-                showAlert(`상태가 '${status}'(으)로 변경되었습니다.`); 
+                showAlert(`결재 상태가 '${status}'(으)로 변경되었습니다.`); 
                 refreshData(false); 
             } else {
-                // 실패 시 화면 원상복구
                 if (targetReq) targetReq.status = originalStatus; 
                 renderDashboard();
             }
@@ -714,11 +673,8 @@
             const remainingLeave = totalLeave - usedLeave;
 
             document.getElementById('total-leave').innerText = totalLeave;
-            
-            // 기존 2.4 등 반올림 되던 문제 해결 (정확하게 3자리 소수점까지 표시 후 뒷 0 제거)
             document.getElementById('remaining-leave').innerText = parseFloat(remainingLeave.toFixed(3));
             
-            // 직관적인 '일/시간' 환산 표기 UI 업데이트
             const detailEl = document.getElementById('remaining-detail');
             const isNegative = remainingLeave < 0;
             const absRemaining = Math.abs(remainingLeave);
@@ -741,11 +697,27 @@
                 
                 let myRequests = state.requests.filter(r => r.userId === u.id);
                 if (myRequests.length === 0) {
-                    hist.innerHTML = '<tr><td colspan="3" class="p-10 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>';
+                    hist.innerHTML = '<tr><td colspan="3" class="p-6 sm:p-10 text-center text-slate-300 font-bold text-xs sm:text-sm">내역이 없습니다.</td></tr>';
                 } else {
                     myRequests.forEach(req => {
-                        const color = req.status === '승인' ? 'bg-emerald-100 text-emerald-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
-                        hist.innerHTML += `<tr class="hover:bg-slate-50 transition-all font-medium"><td class="p-5 text-slate-700 text-[13px] tracking-tight">${formatDate(req.start)} ~ ${formatDate(req.end)}</td><td class="p-5 text-xs font-black text-slate-400">${req.type}</td><td class="p-5 text-right"><span class="px-3 py-1.5 rounded-full text-[10px] font-black ${color}">${req.status}</span></td></tr>`;
+                        const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
+                                      req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
+                                      (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
+                        hist.innerHTML += `
+                            <tr class="hover:bg-slate-50 transition-all font-medium">
+                                <td class="p-3 sm:p-5 whitespace-nowrap">
+                                    <div class="text-[11px] sm:text-[13px] text-slate-700 tracking-tight font-bold">${formatDate(req.leaveDate)}</div>
+                                    <div class="text-[9px] sm:text-[10px] text-slate-400 mt-1">신청: ${formatDate(req.requestDate)}</div>
+                                </td>
+                                <td class="p-3 sm:p-5 whitespace-nowrap">
+                                    <div class="text-[10px] sm:text-xs font-black text-blue-500">${req.type}</div>
+                                    <div class="text-[10px] text-slate-500 mt-1">사유: ${req.reason}</div>
+                                </td>
+                                <td class="p-3 sm:p-5 text-right whitespace-nowrap">
+                                    <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black ${color}">${req.status}</span>
+                                </td>
+                            </tr>
+                        `;
                     });
                 }
             }
@@ -755,41 +727,58 @@
                 adminBody.innerHTML = '';
                 
                 if (state.requests.length === 0) {
-                    adminBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-300 font-bold">등록된 연차 신청이 없습니다.</td></tr>';
+                    adminBody.innerHTML = '<tr><td colspan="5" class="p-6 sm:p-10 text-center text-slate-300 font-bold text-xs sm:text-sm">등록된 연차 신청이 없습니다.</td></tr>';
                 } else {
                     state.requests.forEach(req => {
-                        const fStart = formatDate(req.start);
-                        const fEnd = formatDate(req.end);
-                        const isPending = req.status === '대기';
-                        const color = req.status === '승인' ? 'bg-emerald-100 text-emerald-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
+                        const fReqDate = formatDate(req.requestDate);
+                        const fLeaveDate = formatDate(req.leaveDate);
+                        
+                        const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
+                                      req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
+                                      (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600');
 
                         let actionBtns = '';
-                        if (isPending) {
+                        if (req.status === '대기') {
                             actionBtns = `
-                                <button onclick="updateStatus('${req.id}', '승인')" class="px-3 py-1.5 bg-emerald-500 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-emerald-600 transition-all">승인</button>
-                                <button onclick="updateStatus('${req.id}', '반려')" class="px-3 py-1.5 bg-rose-500 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-rose-600 transition-all">반려</button>
-                                <button onclick="openConfirmModal('${req.id}')" class="px-3 py-1.5 bg-slate-400 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
+                                <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-blue-500 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-blue-600 transition-all">1차 승인</button>
+                                <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-500 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-emerald-600 transition-all">최종 승인</button>
+                                <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-rose-500 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-rose-600 transition-all">반려</button>
+                                <button onclick="openConfirmModal('${req.id}')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-400 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
+                            `;
+                        } else if (req.status === '1차 승인') {
+                            actionBtns = `
+                                <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-500 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-emerald-600 transition-all">최종 승인</button>
+                                <button onclick="updateStatus('${req.id}', '대기')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-400 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-amber-500 transition-all">대기로 강등</button>
+                                <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-rose-500 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-rose-600 transition-all">반려</button>
+                                <button onclick="openConfirmModal('${req.id}')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-400 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
                             `;
                         } else {
                             actionBtns = `
-                                <button onclick="updateStatus('${req.id}', '대기')" class="px-3 py-1.5 bg-amber-400 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-amber-500 transition-all">대기로 수정</button>
-                                <button onclick="openConfirmModal('${req.id}')" class="px-3 py-1.5 bg-slate-400 text-white rounded-lg font-black text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
+                                <button onclick="updateStatus('${req.id}', '대기')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-400 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-amber-500 transition-all">대기로 전환</button>
+                                <button onclick="openConfirmModal('${req.id}')" class="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-400 text-white rounded-md sm:rounded-lg font-black text-[10px] sm:text-[11px] shadow-sm hover:bg-slate-600 transition-all"><i class="fas fa-trash"></i></button>
                             `;
                         }
 
                         adminBody.innerHTML += `
                             <tr class="hover:bg-slate-50 transition-all font-medium border-b border-slate-50">
-                                <td class="p-4">
-                                    <div class="font-black text-slate-800">${req.userName}</div>
-                                    <div class="text-[10px] text-slate-400 font-bold">${req.userId}</div>
+                                <td class="p-3 sm:p-4 whitespace-nowrap">
+                                    <div class="font-black text-slate-800 text-[11px] sm:text-sm">${req.userName}</div>
+                                    <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold">${req.userId}</div>
                                 </td>
-                                <td class="p-4 text-slate-600 text-[12px] tracking-tight">${fStart} ~ <br class="md:hidden">${fEnd}</td>
-                                <td class="p-4 text-xs font-black text-blue-500 bg-blue-50/50 rounded-lg text-center">${req.type}</td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span>
+                                <td class="p-3 sm:p-4 whitespace-nowrap">
+                                    <div class="text-xs font-black text-blue-500">${req.type}</div>
+                                    <div class="text-[11px] text-slate-600 mt-1 font-bold">${fLeaveDate}</div>
+                                    <div class="text-[9px] text-slate-400">신청일: ${fReqDate}</div>
                                 </td>
-                                <td class="p-4 text-right">
-                                    <div class="flex justify-end gap-1.5 flex-wrap">
+                                <td class="p-3 sm:p-4 min-w-[150px] whitespace-normal break-keep">
+                                    <div class="text-[11px] text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
+                                    <div class="text-[11px] text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                </td>
+                                <td class="p-3 sm:p-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black ${color}">${req.status}</span>
+                                </td>
+                                <td class="p-3 sm:p-4 text-right whitespace-nowrap">
+                                    <div class="flex justify-end gap-1 sm:gap-1.5 flex-wrap w-[220px]">
                                         ${actionBtns}
                                     </div>
                                 </td>
