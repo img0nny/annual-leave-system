@@ -15,7 +15,6 @@
             border: 1px solid rgba(255, 255, 255, 0.2); 
         }
         
-        /* 🚀 폼 레이아웃: 모든 입력칸을 가로로 일직선 정렬 */
         .form-row {
             display: flex;
             align-items: center;
@@ -52,29 +51,26 @@
         input::placeholder { color: #cbd5e1; }
         td, th { white-space: nowrap; }
 
-        /* 캘린더 전용 스타일 */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 6px;
         }
 
-        /* 텍스트 크기 강조용 */
         .welcome-text {
-            font-size: 1.5rem; /* PC 기본 */
+            font-size: 1.5rem; 
             font-weight: 900;
             line-height: 1.2;
         }
         @media (max-width: 640px) {
             .welcome-text {
-                font-size: 1.1rem; /* 모바일 크기 조정 */
+                font-size: 1.1rem; 
             }
         }
     </style>
 </head>
 <body class="min-h-screen bg-[#f8fafc]">
 
-    <!-- 로딩 스피너 -->
     <div id="loading" class="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-300">
         <div class="flex flex-col items-center gap-4 bg-white/10 p-8 rounded-3xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
@@ -82,7 +78,6 @@
         </div>
     </div>
 
-    <!-- 로그인 실패 팝업 -->
     <div id="login-error-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl sm:text-3xl">
@@ -94,7 +89,6 @@
         </div>
     </div>
 
-    <!-- 가입 성공 팝업 -->
     <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl sm:text-3xl">
@@ -106,7 +100,6 @@
         </div>
     </div>
 
-    <!-- 삭제 확인 팝업 -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl sm:text-3xl">
@@ -121,7 +114,6 @@
         </div>
     </div>
 
-    <!-- 알림 컨테이너 -->
     <div id="alert-container" class="fixed top-4 right-0 left-0 sm:left-auto sm:right-4 z-[60] flex flex-col items-center sm:items-end px-4 space-y-2 pointer-events-none"></div>
 
     <div id="app" class="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8 h-full">
@@ -133,7 +125,6 @@
                     <p class="text-xs sm:text-sm text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
                 </div>
 
-                <!-- 로그인 폼 -->
                 <form id="login-form" class="w-full" autocomplete="off">
                     <div class="form-row">
                         <label class="label-text">아이디</label>
@@ -151,7 +142,6 @@
                     </p>
                 </form>
 
-                <!-- 회원가입 폼 -->
                 <form id="register-form" class="w-full hidden" autocomplete="off">
                     <div class="form-row">
                         <label class="label-text">소속 팀</label>
@@ -197,7 +187,6 @@
 
         <!-- 메인 섹션 -->
         <div id="main-section" class="hidden">
-            <!-- 상단 환영 메세지 및 네비게이션 -->
             <nav class="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white gap-4">
                 <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
                     <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-lg shrink-0">
@@ -216,14 +205,14 @@
             </nav>
 
             <!-- 상단 커스텀 캘린더 영역 -->
-            <div id="calendar-section" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white p-4 sm:p-8 mb-6 sm:mb-8">
-                <div class="flex justify-between items-center mb-6">
+            <div id="calendar-section" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white p-4 sm:p-6 mb-6 sm:mb-8">
+                <div class="flex justify-between items-center mb-4 sm:mb-6">
                     <h3 class="text-base sm:text-xl font-black text-slate-800 flex items-center gap-2">
                         <i class="far fa-calendar-alt text-blue-500"></i> 일정 확인 및 선택
                     </h3>
                     <div class="flex items-center gap-2 sm:gap-4 bg-slate-100 p-1 rounded-xl">
                         <button onclick="changeMonth(-1)" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-blue-600 transition-all"><i class="fas fa-chevron-left text-xs sm:text-sm"></i></button>
-                        <span id="calendar-month-year" class="font-black text-slate-700 w-24 sm:w-32 text-center text-sm sm:text-lg"></span>
+                        <span id="calendar-month-year" class="font-black text-slate-700 w-20 sm:w-28 text-center text-xs sm:text-base"></span>
                         <button onclick="changeMonth(1)" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-blue-600 transition-all"><i class="fas fa-chevron-right text-xs sm:text-sm"></i></button>
                     </div>
                 </div>
@@ -239,19 +228,10 @@
                 </div>
                 
                 <div id="calendar-grid" class="calendar-grid"></div>
-                
-                <!-- 🚀 캘린더 날짜 클릭 시 나타나는 신청 현황 요약 -->
-                <div id="date-summary-container" class="hidden mt-4 pt-4 border-t border-slate-200/60">
-                    <h4 class="text-[12px] sm:text-sm font-black text-slate-600 mb-3 flex items-center gap-1.5">
-                        <i class="fas fa-clipboard-list text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
-                    </h4>
-                    <div id="date-summary-list" class="space-y-2 flex flex-col"></div>
-                </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 <div class="space-y-6">
-                    <!-- 잔여 연차 요약 -->
                     <div class="glass-morphism p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-white border-l-8 border-l-blue-500">
                         <p class="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
                         <div class="flex items-baseline gap-2 mt-2">
@@ -260,7 +240,6 @@
                         </div>
                     </div>
 
-                    <!-- 연차 신청 폼 -->
                     <div id="user-request-card" class="glass-morphism p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white relative">
                         <h3 class="text-base sm:text-lg font-black text-slate-800 mb-5 flex items-center gap-2">
                             <i class="fas fa-paper-plane text-blue-500"></i> 연차 신청
@@ -296,7 +275,6 @@
                 </div>
 
                 <div class="lg:col-span-2 space-y-6">
-                    <!-- 일반 사원 내역 -->
                     <div id="user-history" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white overflow-hidden">
                         <div class="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
                             <h3 class="text-base sm:text-lg font-black text-slate-800">내 연차 내역</h3>
@@ -318,7 +296,6 @@
                         </div>
                     </div>
 
-                    <!-- 어드민 패널 -->
                     <div id="admin-panel" class="hidden glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white overflow-hidden">
                         <div class="p-4 sm:p-6 border-b border-slate-100 bg-white/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                             <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center">
@@ -337,7 +314,6 @@
                             </div>
                         </div>
 
-                        <!-- 검색된 직원의 연차 요약 정보 -->
                         <div id="admin-search-summary" class="hidden px-4 sm:px-6 py-4 bg-blue-50/30 border-b border-blue-100 flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all">
                             <div class="text-sm font-black text-slate-800"><span id="search-summary-name" class="text-blue-600 text-lg"></span> 님의 연차 현황</div>
                             <div class="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs font-bold w-full sm:w-auto">
@@ -410,13 +386,12 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 🚀 일과 시간을 "0일 0시간" 형식의 문자로 예쁘게 만들어주는 헬퍼 함수
         function formatDaysHours(decimalDays) {
             if (!decimalDays) return "0일";
             const isNegative = decimalDays < 0;
             const absDays = Math.abs(decimalDays);
             const d = Math.floor(absDays);
-            const h = Math.round((absDays - d) * 8); // 8시간 기준 환산
+            const h = Math.round((absDays - d) * 8); 
             
             let text = isNegative ? "-" : "";
             if (d > 0 && h > 0) text += `${d}일 ${h}시간`;
@@ -427,14 +402,13 @@
             return text;
         }
 
-        // 🚀 차감 일수 계산 로직
         function getDeductionDaysLocally(type) {
             if (!type) return 0;
             const t = type.toLowerCase();
             if (t.includes('무급')) return 0;
-            if (t.includes('반차')) return 5 / 8; // 반차 5시간 차감
-            if (t.includes('잔여')) return 3 / 8; // 잔여 3시간 차감
-            return 1; // 일반 연차 1일 차감
+            if (t.includes('반차')) return 5 / 8; 
+            if (t.includes('잔여')) return 3 / 8; 
+            return 1; 
         }
         
         function calculateInitialLeave(joinDateStr) {
@@ -463,6 +437,7 @@
             }, 3000);
         }
 
+        // 🚀 캘린더 렌더링 로직 (셀 내부에 이름 표시 및 구조 변경)
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -481,14 +456,29 @@
                 let teamApprovedCount = 0;
                 let teamPendingCount = 0;
 
-                if (state.currentUser && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
-                    const teamRequests = state.requests.filter(r => 
-                        formatDate(r.leaveDate) === dateStr && 
-                        r.userRole === state.currentUser.role && 
-                        r.status !== '반려'
+                let dayRequests = [];
+
+                if (state.currentUser) {
+                    const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
+                    
+                    // 해당 날짜의 요청사항 필터링
+                    dayRequests = state.requests.filter(r => 
+                        formatDate(r.leaveDate) === dateStr && r.status !== '반려'
                     );
-                    teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
-                    teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
+
+                    // 팀 제한 계산을 위해 본인 소속팀 요청만 추출
+                    if (!isAdmin) {
+                        const teamRequests = dayRequests.filter(r => r.userRole === state.currentUser.role);
+                        teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
+                        teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
+                        
+                        // 일반 유저는 본인 팀의 내역만 보이도록 캘린더 리스트 필터링
+                        dayRequests = teamRequests; 
+                    } else {
+                        // 관리자는 팀 제한 체크 불필요, 모든 리스트가 보임
+                        teamApprovedCount = 0;
+                        teamPendingCount = 0;
+                    }
                 }
                 
                 const isTeamClosed = teamApprovedCount >= 1; 
@@ -498,17 +488,14 @@
                 const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
                 const isPast = dateStr < todayStr;
                 
-                cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[55px] sm:min-h-[70px] `;
+                cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col justify-start transition-all min-h-[80px] sm:min-h-[100px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
                 
-                // 🚀 휴무일은 완전 차단, 과거 날짜는 클릭(조회)만 허용하도록 변경
                 if (isClosedDay) {
-                    cell.classList.add('bg-slate-50', 'cursor-not-allowed', 'opacity-60'); 
+                    cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col justify-start transition-all min-h-[80px] sm:min-h-[100px] relative overflow-hidden bg-slate-50 cursor-not-allowed opacity-60 `;
+                } else if (isPast) {
+                    cell.classList.add('bg-slate-50', 'text-slate-400', 'cursor-pointer');
                 } else {
-                    if (isPast) {
-                        cell.classList.add('bg-slate-50', 'text-slate-400', 'cursor-pointer', 'hover:border-slate-300');
-                    } else {
-                        cell.classList.add('cursor-pointer', 'bg-white', 'hover:border-blue-300', 'hover:shadow-sm');
-                    }
+                    cell.classList.add('cursor-pointer');
                 }
                 
                 if (dateStr === selectedDateStr) {
@@ -516,19 +503,27 @@
                     cell.classList.remove('border-slate-100', 'bg-white', 'bg-slate-50');
                 }
 
+                // 🚀 상단 영역: 날짜 숫자 + (선택적 상태 배지)
+                const topRow = document.createElement('div');
+                topRow.className = 'w-full flex justify-between items-start mb-1';
+
                 const dateNum = document.createElement('span');
-                dateNum.className = `text-[12px] sm:text-sm font-bold `;
+                dateNum.className = `text-[11px] sm:text-[13px] font-bold ${dayOfWeek === 0 || dayOfWeek === 3 ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
+                dateNum.innerText = i;
+                topRow.appendChild(dateNum);
+
                 const statusBadge = document.createElement('span');
-                statusBadge.className = `mt-1.5 text-[10px] sm:text-xs font-black px-1.5 py-0.5 rounded-md w-full text-center `;
+                statusBadge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md truncate max-w-[60%] text-center `;
+                
                 if (isPast) {
-                    statusBadge.className += 'bg-slate-200 text-slate-500';
+                    statusBadge.className += 'bg-slate-100 text-slate-400';
                     statusBadge.innerText = '마감';
                 } else if (isClosedDay) {
                     statusBadge.className += 'bg-rose-50 text-rose-500';
                     statusBadge.innerText = '휴무';
                 } else if (isTeamClosed) {
                     statusBadge.className += 'bg-red-50 text-red-600';
-                    statusBadge.innerText = '연차마감'; 
+                    statusBadge.innerText = '마감'; 
                 } else if (isTeamPending) {
                     statusBadge.className += 'bg-yellow-50 text-yellow-600';
                     statusBadge.innerText = '승인중'; 
@@ -536,15 +531,34 @@
                     statusBadge.className += 'bg-emerald-50 text-emerald-500';
                     statusBadge.innerText = '가능';
                 }
-                cell.appendChild(statusBadge);
+                topRow.appendChild(statusBadge);
+                cell.appendChild(topRow);
 
-                // 🚀 휴무일이 아니면 클릭해서 현황을 조회할 수 있도록 변경
+                // 🚀 하단 영역: 신청자 목록 표시
+                const reqList = document.createElement('div');
+                reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
+                
+                dayRequests.forEach(req => {
+                    const reqItem = document.createElement('div');
+                    const colorClass = (req.status === '최종 승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
+                    
+                    let shortType = req.type;
+                    if(shortType.includes('일반 연차')) shortType = '연차';
+                    else if(shortType.includes('무급 휴가')) shortType = '무급';
+                    else if(shortType.includes('반차')) shortType = '반차';
+                    else if(shortType.includes('잔여')) shortType = '잔여';
+
+                    reqItem.className = `text-[9px] sm:text-[10px] px-1 py-0.5 rounded truncate w-full font-bold text-left ${colorClass}`;
+                    reqItem.innerText = `${req.userName}(${shortType})`;
+                    reqList.appendChild(reqItem);
+                });
+                
+                cell.appendChild(reqList);
+
+                // 휴무일과 과거는 폼 입력은 안되지만 내역 조회를 위해 과거는 클릭 가능하게 설정
                 if (!isClosedDay) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
-                        renderDateSummary(dateStr); // 해당 날짜의 신청 현황 렌더링
-                        
-                        // 과거 날짜는 폼 입력 방지 처리
                         if (!isPast) {
                             document.getElementById('leave-date').value = dateStr;
                             updateDropdownsForDate(dateStr, isTeamClosed, isTeamPending);
@@ -557,55 +571,6 @@
                 }
                 grid.appendChild(cell);
             }
-            
-            // 캘린더 리렌더링 시 선택된 날짜의 현황창 유지
-            if (selectedDateStr) {
-                renderDateSummary(selectedDateStr);
-            }
-        }
-
-        // 🚀 캘린더 날짜 클릭 시 하단에 신청 현황을 요약해서 보여주는 함수
-        function renderDateSummary(dateStr) {
-            const container = document.getElementById('date-summary-container');
-            const listEl = document.getElementById('date-summary-list');
-            const dateText = document.getElementById('summary-date-text');
-
-            if (!dateStr) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            dateText.innerText = dateStr;
-            listEl.innerHTML = '';
-
-            const dayRequests = state.requests.filter(r => 
-                formatDate(r.leaveDate) === dateStr && r.status !== '반려'
-            );
-
-            if (dayRequests.length === 0) {
-                listEl.innerHTML = '<div class="text-[11px] sm:text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center border border-slate-100 shadow-inner">해당 일자에 승인 또는 대기 중인 연차가 없습니다.</div>';
-            } else {
-                dayRequests.forEach(req => {
-                    const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
-                                  req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
-                                  'bg-yellow-100 text-yellow-600';
-                    const roleName = ROLE_MAP[req.userRole] || req.userRole;
-
-                    listEl.innerHTML += `
-                        <div class="flex justify-between items-center bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                                <div class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5">
-                                    ${req.userName} 
-                                    <span class="text-[9px] sm:text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">${roleName}</span>
-                                </div>
-                                <div class="text-[11px] sm:text-xs font-bold text-slate-500">${req.type}</div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-black ${color} shrink-0">${req.status}</span>
-                        </div>
-                    `;
-                });
-            }
-            container.classList.remove('hidden');
         }
 
         function changeMonth(delta) {
@@ -626,7 +591,7 @@
                 return;
             }
 
-            // 🚀 정원 마감 시 경고 알람(showAlert) 제거, 폼 입력만 조용히 블록
+            // 🚀 경고창 띄우지 않고 폼 리스트만 정원 마감으로 변경
             if (isTeamClosed || isTeamPending) {
                 typeSelect.add(new Option('신청 정원 마감', ''));
                 return;
@@ -750,6 +715,7 @@
                 apiCall('fetchData', { id: user.id, role: user.role }, false).then(res => {
                     if (res && res.user) {
                         state.currentUser = res.user; state.requests = res.requests;
+                        if (res.allUsers) state.allUsers = res.allUsers; 
                         safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
                         renderCalendar();
                         renderDashboard();
@@ -795,7 +761,6 @@
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
             
-            // 🚀 관리자 환영 문구 커스터마이징 및 배지 표시 제한
             let welcomeText = '';
             if (user.role === 'admin') {
                 welcomeText = `안녕하세요 최고 관리자님!`;
@@ -824,6 +789,12 @@
             const requestDate = formatDate(new Date()); 
             const leaveDate = document.getElementById('leave-date').value;
             const reason = document.getElementById('leave-reason').value;
+            const handover = document.getElementById('leave-handover').value;
+            if (!leaveDate) return showAlert('일정을 먼저 선택하세요.', 'error');
+            let leaveType = document.getElementById('leave-type').value;
+            if (document.getElementById('detail-container').classList.contains('hidden') === false) {
+                leaveType = document.getElementById('leave-detail').value;
+            }
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
@@ -838,7 +809,6 @@
                 document.getElementById('leave-request-form').reset(); 
                 selectedDateStr = '';
                 updateDropdownsForDate('');
-                renderDateSummary(''); // 🚀 폼 초기화 시 현황 요약창도 숨기기
                 refreshData(true); 
             }
         };
@@ -875,7 +845,6 @@
 
             const remainingLeave = totalLeave - usedLeave - pendingLeaveDays;
             
-            // 🚀 깔끔하게 일, 시간 포맷으로 치환
             document.getElementById('total-leave').innerText = totalLeave;
             document.getElementById('remaining-leave').innerText = formatDaysHours(remainingLeave);
             
@@ -952,7 +921,6 @@
                         const remain = total - used;
                         
                         document.getElementById('search-summary-name').innerText = targetName;
-                        // 🚀 검색 패널 요약도 깔끔하게 포맷팅
                         document.getElementById('search-summary-total').innerText = total + "일";
                         document.getElementById('search-summary-used').innerText = formatDaysHours(used);
                         document.getElementById('search-summary-remain').innerText = formatDaysHours(remain);
