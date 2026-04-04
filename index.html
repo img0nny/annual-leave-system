@@ -15,10 +15,10 @@
             border: 1px solid rgba(255, 255, 255, 0.2); 
         }
         .input-field { 
-            @apply w-full mt-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium; 
+            @apply w-full p-3 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1; 
         }
         .label-text { 
-            @apply block text-[13px] font-bold text-slate-700 ml-1 mb-1; 
+            @apply w-16 sm:w-20 text-xs sm:text-sm font-bold text-slate-700 shrink-0 text-left; 
         }
         input::placeholder { color: #cbd5e1; }
         td, th { white-space: nowrap; }
@@ -88,12 +88,12 @@
                 <!-- 로그인 폼 -->
                 <form id="login-form" class="space-y-3 sm:space-y-4">
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <label class="w-16 sm:w-20 text-xs sm:text-sm font-bold text-slate-700 shrink-0 text-left">아이디</label>
-                        <input type="text" id="login-id" required class="w-full p-3 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="아이디 입력">
+                        <label class="label-text">아이디</label>
+                        <input type="text" id="login-id" required class="input-field" placeholder="아이디 입력">
                     </div>
                     <div class="flex items-center gap-3 sm:gap-4">
-                        <label class="w-16 sm:w-20 text-xs sm:text-sm font-bold text-slate-700 shrink-0 text-left">비밀번호</label>
-                        <input type="password" id="login-pw" required class="w-full p-3 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium flex-1" placeholder="••••••••">
+                        <label class="label-text">비밀번호</label>
+                        <input type="password" id="login-pw" required class="input-field" placeholder="••••••••">
                     </div>
                     <button type="submit" class="w-full bg-blue-600 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg mt-4 text-sm sm:text-base">
                         로그인
@@ -104,38 +104,30 @@
                 </form>
 
                 <!-- 회원가입 폼 -->
-                <form id="register-form" class="space-y-4 hidden">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
-                        <div>
-                            <label class="label-text">이름</label>
-                            <input type="text" id="reg-name" required maxlength="3" class="input-field" placeholder="예: 홍길동">
-                        </div>
-                        <div>
-                            <label class="label-text">생년월일</label>
-                            <input type="text" id="reg-birth" required maxlength="10" class="input-field" placeholder="1990-01-01" oninput="autoHyphenDate(this)">
-                        </div>
+                <form id="register-form" class="space-y-3 sm:space-y-4 hidden">
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="label-text">이름</label>
+                        <input type="text" id="reg-name" required maxlength="3" class="input-field" placeholder="예: 홍길동">
                     </div>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
-                        <div>
-                            <label class="label-text">휴대폰 번호</label>
-                            <input type="tel" id="reg-phone" required maxlength="13" class="input-field" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)">
-                        </div>
-                        <div>
-                            <label class="label-text">입사일</label>
-                            <input type="text" id="reg-join" required maxlength="10" class="input-field" placeholder="2024-01-01" oninput="autoHyphenDate(this)">
-                        </div>
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="label-text">생년월일</label>
+                        <input type="text" id="reg-birth" required maxlength="10" class="input-field" placeholder="1990-01-01" oninput="autoHyphenDate(this)">
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3">
-                        <div>
-                            <label class="label-text">사용할 아이디 (ID)</label>
-                            <input type="text" id="reg-id" required class="input-field" placeholder="영문/숫자 입력">
-                        </div>
-                        <div>
-                            <label class="label-text">비밀번호</label>
-                            <input type="password" id="reg-pw" required class="input-field" placeholder="••••••••">
-                        </div>
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="label-text">휴대폰 번호</label>
+                        <input type="tel" id="reg-phone" required maxlength="13" class="input-field" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)">
+                    </div>
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="label-text">입사일</label>
+                        <input type="text" id="reg-join" required maxlength="10" class="input-field" placeholder="2024-01-01" oninput="autoHyphenDate(this)">
+                    </div>
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="label-text">아이디</label>
+                        <input type="text" id="reg-id" required class="input-field" placeholder="영문/숫자 입력">
+                    </div>
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <label class="label-text">비밀번호</label>
+                        <input type="password" id="reg-pw" required class="input-field" placeholder="••••••••">
                     </div>
 
                     <button type="submit" class="w-full bg-emerald-600 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-4 text-sm sm:text-base">
@@ -182,58 +174,39 @@
                         </div>
                     </div>
 
-                    <!-- 🚀 수정된 연차 신청 폼 -->
+                    <!-- 🚀 배치 및 요소가 최적화된 연차 신청 폼 -->
                     <div id="user-request-card" class="glass-morphism p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white">
-                        <h3 class="text-base sm:text-lg font-black text-slate-800 mb-4 sm:mb-5 flex items-center gap-2">
+                        <h3 class="text-base sm:text-lg font-black text-slate-800 mb-5 sm:mb-6 flex items-center gap-2">
                             <i class="fas fa-paper-plane text-blue-500"></i> 연차/휴가 신청
                         </h3>
                         <form id="leave-request-form" class="space-y-3 sm:space-y-4">
-                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
-                                <div>
-                                    <label class="label-text">신청일</label>
-                                    <input type="text" id="req-date" readonly class="input-field mt-1 p-2.5 sm:p-3 bg-slate-100 text-slate-500 cursor-not-allowed font-bold">
-                                </div>
-                                <div>
-                                    <label class="label-text">연차 신청 일자</label>
-                                    <input type="date" id="leave-date" required class="input-field mt-1 p-2.5 sm:p-3">
-                                </div>
+                            
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <label class="label-text">휴가 일자</label>
+                                <input type="date" id="leave-date" required class="input-field">
                             </div>
                             
-                            <div>
+                            <div class="flex items-center gap-3 sm:gap-4">
                                 <label class="label-text">유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field mt-1 p-2.5 sm:p-3 font-bold">
+                                <select id="leave-type" class="input-field font-bold">
                                     <option value="일반 연차">일반 연차 (1일)</option>
                                     <option value="반차 (5시간)">반차 (5시간)</option>
                                     <option value="반차 (3시간)">반차 (3시간)</option>
-                                    <option value="시간차">시간차 (1~7시간)</option>
                                     <option value="무급 휴가">무급 휴가 (차감없음)</option>
                                 </select>
                             </div>
 
-                            <div id="hourly-container" class="hidden animate-in slide-in-from-top-2 duration-300">
-                                <label class="label-text">사용 시간</label>
-                                <select id="leave-hours" class="input-field mt-1 p-2.5 sm:p-3 font-bold">
-                                    <option value="1">1시간 (0.125일)</option>
-                                    <option value="2">2시간 (0.25일)</option>
-                                    <option value="3">3시간 (0.375일)</option>
-                                    <option value="4">4시간 (0.5일)</option>
-                                    <option value="5">5시간 (0.625일)</option>
-                                    <option value="6">6시간 (0.75일)</option>
-                                    <option value="7">7시간 (0.875일)</option>
-                                </select>
-                            </div>
-
-                            <div>
+                            <div class="flex items-center gap-3 sm:gap-4">
                                 <label class="label-text">사유</label>
-                                <input type="text" id="leave-reason" required class="input-field mt-1 p-2.5 sm:p-3" placeholder="구체적인 사유를 입력하세요">
+                                <input type="text" id="leave-reason" required class="input-field" placeholder="사유를 입력하세요">
                             </div>
 
-                            <div>
+                            <div class="flex items-center gap-3 sm:gap-4">
                                 <label class="label-text">인수인계</label>
-                                <input type="text" id="leave-handover" required class="input-field mt-1 p-2.5 sm:p-3" placeholder="인수자 및 인계사항 입력 (없을 시 '없음')">
+                                <input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항">
                             </div>
 
-                            <button type="submit" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-4 text-sm sm:text-base">
+                            <button type="submit" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-5 text-sm sm:text-base">
                                 신청하기
                             </button>
                         </form>
@@ -255,7 +228,7 @@
                             <table class="w-full text-left min-w-[500px]">
                                 <thead>
                                     <tr class="bg-slate-50/80">
-                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">신청일 / 휴가일자</th>
+                                        <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">휴가일자</th>
                                         <th class="p-3 sm:p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">유형 / 상세사유</th>
                                         <th class="p-3 sm:p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">결재 상태</th>
                                     </tr>
@@ -300,11 +273,6 @@
 
         let state = { currentUser: null, requests: [] };
 
-        // 오늘 날짜 기본 세팅
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('req-date').value = formatDate(new Date());
-        });
-
         function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
         function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
 
@@ -318,13 +286,11 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 💡 수정된 차감 헬퍼
+        // 💡 수정된 차감 헬퍼 (반차 시간 조정 및 무급휴가 처리 반영)
         function getDeductionDaysLocally(type) {
             if (type.includes('무급 휴가')) return 0;
             if (type.includes('반차 (5시간)')) return 5 / 8;
             if (type.includes('반차 (3시간)')) return 3 / 8;
-            let hourMatch = type.match(/시간차\s*\((\d+)시간\)/);
-            if (hourMatch) return parseInt(hourMatch[1], 10) / 8;
             return 1; // 일반 연차
         }
         
@@ -362,16 +328,6 @@
                 div.classList.add('opacity-0', 'transition-opacity', 'duration-300');
                 setTimeout(() => div.remove(), 300);
             }, 3000);
-        }
-
-        function handleLeaveTypeChange() {
-            const type = document.getElementById('leave-type').value;
-            const hourlyContainer = document.getElementById('hourly-container');
-            if (type === '시간차') {
-                hourlyContainer.classList.remove('hidden');
-            } else {
-                hourlyContainer.classList.add('hidden');
-            }
         }
 
         // --- 모달 관리 ---
@@ -579,16 +535,12 @@
         // 🚀 낙관적 연차 신청
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
-            const requestDate = document.getElementById('req-date').value;
+            // 신청일은 시스템에서 현재 날짜로 자동 생성하여 백엔드로 보냄
+            const requestDate = formatDate(new Date()); 
             const leaveDate = document.getElementById('leave-date').value;
             const reason = document.getElementById('leave-reason').value;
             const handover = document.getElementById('leave-handover').value;
-            
-            let leaveType = document.getElementById('leave-type').value;
-            if (leaveType === '시간차') {
-                const hours = document.getElementById('leave-hours').value;
-                leaveType = `시간차 (${hours}시간)`;
-            }
+            const leaveType = document.getElementById('leave-type').value;
 
             const tempId = 'temp-' + Date.now();
             const newReq = {
@@ -614,8 +566,6 @@
             if (res) { 
                 showAlert('신청이 완료되었습니다.', 'success'); 
                 document.getElementById('leave-request-form').reset(); 
-                document.getElementById('req-date').value = formatDate(new Date()); // 신청일 재세팅
-                handleLeaveTypeChange(); 
                 refreshData(false); 
             } else {
                 state.requests = state.requests.filter(r => r.id !== tempId);
