@@ -43,7 +43,7 @@
             transition: all 0.2s;
             margin: 0;
         }
-        .input-field:focus {
+        .input-field:focus:not(:disabled) {
             border-color: #3b82f6;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
             background-color: #ffffff;
@@ -247,6 +247,7 @@
                         <form id="leave-request-form" class="w-full">
                             <div class="form-row">
                                 <label class="label-text">연차 일정</label>
+                                <!-- 날짜 직접 입력 시에도 완벽히 반응하도록 설계됨 -->
                                 <input type="date" id="leave-date" required class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();">
                             </div>
                             <div class="form-row">
@@ -267,7 +268,7 @@
                                 <label class="label-text">인수인계</label>
                                 <input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항">
                             </div>
-                            <button type="submit" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3 text-sm sm:text-base">
+                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3 text-sm sm:text-base">
                                 신청하기
                             </button>
                         </form>
@@ -428,7 +429,7 @@
             const container = document.getElementById('alert-container');
             const div = document.createElement('div');
             const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
-            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 font-bold text-xs sm:text-sm mb-2 pointer-events-auto`;
+            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 font-bold text-xs sm:text-sm mb-2 pointer-events-auto z-50`;
             div.innerHTML = `<span>${msg}</span>`;
             container.appendChild(div);
             setTimeout(() => {
@@ -468,7 +469,6 @@
                         const teamRequests = dayRequests.filter(r => r.userRole === state.currentUser.role);
                         teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
                         teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
-                        
                         dayRequests = teamRequests; 
                     } else {
                         teamApprovedCount = 0;
@@ -553,7 +553,7 @@
                         selectedDateStr = dateStr;
                         if (!isPast) {
                             document.getElementById('leave-date').value = dateStr;
-                            updateDropdownsForDate(dateStr, isTeamClosed, isTeamPending);
+                            updateDropdownsForDate(dateStr);
                         } else {
                             document.getElementById('leave-date').value = '';
                             updateDropdownsForDate(''); 
@@ -570,24 +570,68 @@
             renderCalendar();
         }
 
-        function updateDropdownsForDate(dateStr, isTeamClosed = false, isTeamPending = false) {
+        // 🚀 입력 폼 방어 로직 (마감된 날짜 선택 시 폼 자체를 닫아버림)
+        function updateDropdownsForDate(dateStr) {
             const typeSelect = document.getElementById('leave-type');
             const detailContainer = document.getElementById('detail-container');
+            const submitBtn = document.getElementById('submit-btn');
+            
             const dateObj = new Date(dateStr);
             const day = dateObj.getDay(); 
             typeSelect.innerHTML = ''; 
             detailContainer.classList.add('hidden');
 
-            if (!dateStr || isNaN(day) || day === 0 || day === 3) {
+            // 1. 기본 상태 (활성화)로 리셋
+            typeSelect.disabled = false;
+            typeSelect.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold';
+            submitBtn.disabled = false;
+            submitBtn.className = 'w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3 text-sm sm:text-base';
+            submitBtn.innerText = '신청하기';
+
+            // 2. 날짜 미선택, 휴무일, 과거 일자 차단
+            if (!dateStr || isNaN(day) || day === 0 || day === 3 || dateStr < formatDate(new Date())) {
                 typeSelect.add(new Option('↑ 일정을 선택하세요', ''));
+                if (dateStr && (day === 0 || day === 3)) typeSelect.options[0].text = '휴무일은 신청할 수 없습니다';
+                else if (dateStr && dateStr < formatDate(new Date())) typeSelect.options[0].text = '과거 일자는 신청할 수 없습니다';
+
+                typeSelect.disabled = true;
+                typeSelect.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed';
+                submitBtn.disabled = true;
+                submitBtn.className = 'w-full bg-slate-200 text-slate-400 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black cursor-not-allowed mt-3 text-sm sm:text-base';
+                submitBtn.innerText = '신청 불가';
                 return;
             }
 
+            // 3. 팀 정원 상태 조회 (수동 입력 시 방어 위해 내부에서 직접 조회)
+            let isTeamClosed = false;
+            let isTeamPending = false;
+
+            if (state.currentUser && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
+                const teamRequests = state.requests.filter(r => 
+                    formatDate(r.leaveDate) === dateStr && 
+                    r.userRole === state.currentUser.role && 
+                    r.status !== '반려'
+                );
+                const approved = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
+                const pending = teamRequests.filter(r => r.status === '대기').length;
+                
+                isTeamClosed = approved >= 1; 
+                isTeamPending = !isTeamClosed && (pending >= 1);
+            }
+
+            // 4. 정원 마감 시 폼 비활성화
             if (isTeamClosed || isTeamPending) {
                 typeSelect.add(new Option('신청 정원 마감', ''));
+                typeSelect.disabled = true;
+                typeSelect.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed';
+                
+                submitBtn.disabled = true;
+                submitBtn.className = 'w-full bg-slate-200 text-slate-400 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black cursor-not-allowed mt-3 text-sm sm:text-base';
+                submitBtn.innerText = '정원 마감 (신청 불가)';
                 return;
             }
 
+            // 5. 정상 선택 시 목록 부여
             if (day === 6) {
                 typeSelect.add(new Option('토요일 반차', '토요일 반차'));
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
@@ -775,6 +819,7 @@
             renderDashboard();
         }
 
+        // 🚀 최종 이중 보안 폼 제출
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const requestDate = formatDate(new Date()); 
@@ -790,9 +835,10 @@
             }
 
             if (!leaveType) {
-                return showAlert('해당 일자는 연차 신청이 마감되었거나 선택할 수 없습니다.', 'error');
+                return showAlert('유효하지 않은 일정입니다. 다시 선택해주세요.', 'error');
             }
 
+            // 🚀 제출하는 순간 서버 최신 상태 기반 한 번 더 검증
             if (state.currentUser.role === 'desk' || state.currentUser.role === 'user') {
                 const teamRequests = state.requests.filter(r => 
                     formatDate(r.leaveDate) === leaveDate && 
@@ -801,7 +847,7 @@
                 );
                 
                 if (teamRequests.length >= 1) {
-                    return showAlert('해당 날짜에 소속 팀의 연차 인원이 이미 마감되었습니다.', 'error');
+                    return showAlert('이미 누군가 선점했습니다. 다른 날짜를 선택해주세요.', 'error');
                 }
             }
 
