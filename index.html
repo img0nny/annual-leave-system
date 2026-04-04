@@ -15,7 +15,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2); 
         }
         
-        /* 명확하고 일관된 가로 1열 정렬을 위한 전용 CSS */
+        /* 가로 1열 정렬 폼 디자인 */
         .form-row {
             display: flex;
             align-items: center;
@@ -51,7 +51,7 @@
         input::placeholder { color: #cbd5e1; }
         td, th { white-space: nowrap; }
 
-        /* 캘린더 전용 스타일 */
+        /* 캘린더 디자인 */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -138,7 +138,7 @@
                     </p>
                 </form>
 
-                <!-- 회원가입 폼 (소속 팀 선택 추가됨) -->
+                <!-- 회원가입 폼 -->
                 <form id="register-form" class="w-full hidden">
                     <div class="form-row">
                         <label class="label-text">소속 팀</label>
@@ -253,7 +253,6 @@
                             
                             <div class="form-row">
                                 <label class="label-text">연차 일정</label>
-                                <!-- 달력 클릭 시 동기화 됨. 직접 입력도 가능 -->
                                 <input type="date" id="leave-date" required class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();">
                             </div>
                             
@@ -261,11 +260,9 @@
                                 <label class="label-text">연차 유형</label>
                                 <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50 text-blue-700">
                                     <option value="" disabled selected>↑ 먼저 일정을 선택하세요</option>
-                                    <!-- JS에서 날짜(요일) 및 팀 잔여 인원에 따라 동적으로 채워집니다. -->
                                 </select>
                             </div>
 
-                            <!-- 반차 선택 시 나타나는 동적 상세 드롭다운 -->
                             <div id="detail-container" class="form-row hidden animate-in slide-in-from-top-2 duration-300">
                                 <label class="label-text">상세 선택</label>
                                 <select id="leave-detail" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold"></select>
@@ -348,7 +345,6 @@
 
         let state = { currentUser: null, requests: [] };
         
-        // 🚀 권한(팀) 매핑 객체
         const ROLE_MAP = {
             'admin': '최고 관리자',
             'subadmin': '중간관리자',
@@ -356,11 +352,10 @@
             'user': '진료팀'
         };
 
-        // 🚀 캘린더 상태 관리 변수
         let currentDate = new Date();
         let selectedDateStr = '';
 
-        // 💡 윅스 환경을 위한 안전한 스토리지 접근 래퍼 (흰색 화면 방지)
+        // 💡 윅스 환경을 위한 안전한 스토리지 접근 래퍼
         const safeStorage = {
             get: function(key, isLocal = false) {
                 try { return isLocal ? localStorage.getItem(key) : sessionStorage.getItem(key); } catch(e) { return null; }
@@ -388,10 +383,11 @@
 
         // 💡 차감 로직
         function getDeductionDaysLocally(type) {
+            if (!type) return 0;
             if (type.includes('무급 휴가')) return 0;
-            if (type.includes('반차 - 5시간 차감')) return 5 / 8; // 오후 반차, 토요일 반차
-            if (type.includes('잔여')) return 3 / 8; // 오후 잔여, 토요일 잔여
-            return 1; // 일반 연차
+            if (type === '오후 반차' || type === '토요일 반차') return 5 / 8;
+            if (type.includes('잔여')) return 3 / 8;
+            return 1; 
         }
         
         function calculateInitialLeave(joinDateStr) {
@@ -426,7 +422,7 @@
             }, 3000);
         }
 
-        // 🚀 캘린더 렌더링 함수
+        // 🚀 캘린더 렌더링 로직 (날짜 형식 매칭 버그 수정 및 승인대기 적용)
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -439,42 +435,39 @@
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
             
-            // 앞쪽 빈 칸 채우기
             for (let i = 0; i < firstDayIndex; i++) {
                 grid.appendChild(document.createElement('div'));
             }
 
             const todayStr = formatDate(new Date());
 
-            // 날짜 채우기
             for (let i = 1; i <= lastDay; i++) {
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 const dayOfWeek = new Date(year, month, i).getDay();
                 
-                // 팀 연차 인원 검사 (마감 및 대기 상태 확인)
                 let teamApprovedCount = 0;
                 let teamPendingCount = 0;
 
+                // 💡 날짜 비교 시 반드시 formatDate()를 거쳐 정확히 일치하도록 수정
                 if (state.currentUser && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
                     const teamRequests = state.requests.filter(r => 
-                        r.leaveDate === dateStr && 
+                        formatDate(r.leaveDate) === dateStr && 
                         r.userRole === state.currentUser.role && 
                         r.status !== '반려' &&
                         r.type !== '무급 휴가'
                     );
 
-                    teamApprovedCount = teamRequests.filter(r => r.status === '1차 승인' || r.status === '최종 승인').length;
-                    teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
+                    teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인').length;
+                    teamPendingCount = teamRequests.filter(r => r.status === '대기' || r.status === '1차 승인').length;
                 }
                 
-                const isTeamClosed = teamApprovedCount >= 1; // 1명이라도 승인되면 마감
-                const isTeamPending = !isTeamClosed && (teamPendingCount >= 1); // 승인은 안 났지만 누군가 대기 중
+                const isTeamClosed = teamApprovedCount >= 1; 
+                const isTeamPending = !isTeamClosed && (teamPendingCount >= 1); 
 
                 const cell = document.createElement('div');
-                const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); // 일(0), 수(3)
+                const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
                 const isPast = dateStr < todayStr;
                 
-                // 기본 셀 스타일
                 cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[70px] `;
                 
                 if (isPast) {
@@ -483,13 +476,11 @@
                     cell.classList.add('cursor-pointer', 'bg-white', 'hover:border-blue-300', 'hover:shadow-sm');
                 }
                 
-                // 선택된 날짜 하이라이트
                 if (dateStr === selectedDateStr) {
                     cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-200');
                     cell.classList.remove('border-slate-100', 'bg-white');
                 }
 
-                // 날짜 숫자
                 const dateNum = document.createElement('span');
                 dateNum.className = `text-[13px] sm:text-sm font-bold `;
                 if (dayOfWeek === 0 || dayOfWeek === 3) dateNum.classList.add('text-red-400');
@@ -498,7 +489,6 @@
                 dateNum.innerText = i;
                 cell.appendChild(dateNum);
 
-                // 🚀 상태 뱃지 표시 로직 (승인대기 추가)
                 const statusBadge = document.createElement('span');
                 statusBadge.className = `mt-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md w-full text-center `;
                 
@@ -506,27 +496,26 @@
                     statusBadge.className += 'bg-slate-200 text-slate-500';
                     statusBadge.innerText = '마감';
                 } else if (isClosedDay) {
-                    statusBadge.className += 'bg-red-50 text-red-500';
+                    statusBadge.className += 'bg-rose-50 text-rose-500';
                     statusBadge.innerText = '휴무';
                 } else if (isTeamClosed) {
-                    statusBadge.className += 'bg-orange-50 text-orange-600';
-                    statusBadge.innerText = '연차마감'; // 1명 이상 승인 완료됨
+                    statusBadge.className += 'bg-red-50 text-red-600';
+                    statusBadge.innerText = '연차마감'; 
                 } else if (isTeamPending) {
                     statusBadge.className += 'bg-yellow-50 text-yellow-600';
-                    statusBadge.innerText = '승인대기'; // 누군가 신청 후 승인 대기 중
+                    statusBadge.innerText = '승인대기'; 
                 } else {
                     statusBadge.className += 'bg-emerald-50 text-emerald-500';
                     statusBadge.innerText = '가능';
                 }
                 cell.appendChild(statusBadge);
 
-                // 클릭 이벤트 (과거는 클릭 불가)
                 if (!isPast) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
                         document.getElementById('leave-date').value = dateStr;
                         updateDropdownsForDate(dateStr, isTeamClosed, isTeamPending);
-                        renderCalendar(); // 재렌더링하여 하이라이트 업데이트
+                        renderCalendar(); 
                     };
                 }
 
@@ -539,7 +528,6 @@
             renderCalendar();
         }
 
-        // 🚀 날짜(요일) 및 팀 제한 상태에 따라 연차 유형 드롭다운 목록을 똑똑하게 제한
         function updateDropdownsForDate(dateStr, isTeamClosed = false, isTeamPending = false) {
             const typeSelect = document.getElementById('leave-type');
             const detailContainer = document.getElementById('detail-container');
@@ -555,22 +543,17 @@
             }
 
             if (day === 0 || day === 3) {
-                // 수/일 (휴무일) -> 무급휴가만 가능
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
             } else if (isTeamClosed) {
-                // 마감 -> 무급휴가만 가능
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
                 showAlert('해당 일자는 팀 연차 인원이 마감되어 무급 휴가만 신청 가능합니다.', 'error');
             } else if (isTeamPending) {
-                // 승인대기 -> 다른 사람이 먼저 선점 중이므로 무급휴가만 가능
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
                 showAlert('해당 일자는 다른 팀원이 승인 대기 중입니다. 무급 휴가만 신청 가능합니다.', 'info');
             } else if (day === 6) {
-                // 토요일
                 typeSelect.add(new Option('토요일 반차', '토요일 반차'));
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
             } else {
-                // 평일 (월, 화, 목, 금)
                 typeSelect.add(new Option('일반 연차 (1일)', '일반 연차'));
                 typeSelect.add(new Option('오후 반차', '오후 반차'));
                 typeSelect.add(new Option('오후 잔여', '오후 잔여'));
@@ -581,7 +564,6 @@
             handleLeaveTypeChange();
         }
 
-        // 🚀 선택된 유형에 따른 하위(상세) 드롭다운 조작
         function handleLeaveTypeChange() {
             const type = document.getElementById('leave-type').value;
             const detailContainer = document.getElementById('detail-container');
@@ -590,20 +572,20 @@
             detailSelect.innerHTML = ''; 
 
             if (type === '오후 반차') {
-                detailSelect.add(new Option('오후 반차 - 5시간 차감', '오후 반차 - 5시간 차감'));
+                detailSelect.add(new Option('오후 반차 - 5시간 차감', '오후 반차'));
                 detailContainer.classList.remove('hidden');
             } else if (type === '토요일 반차') {
-                detailSelect.add(new Option('토요일 반차 - 5시간 차감', '토요일 반차 - 5시간 차감'));
+                detailSelect.add(new Option('토요일 반차 - 5시간 차감', '토요일 반차'));
                 detailContainer.classList.remove('hidden');
             } else if (type === '오후 잔여') {
-                detailSelect.add(new Option('오후 잔여 (전) - 3시간 차감', '오후 잔여 (전) - 3시간 차감'));
-                detailSelect.add(new Option('오후 잔여 (후) - 3시간 차감', '오후 잔여 (후) - 3시간 차감'));
-                detailSelect.add(new Option('오후 잔여 (야) - 3시간 차감', '오후 잔여 (야) - 3시간 차감'));
+                detailSelect.add(new Option('오후 잔여 (전) - 3시간 차감', '오후 잔여 (전)'));
+                detailSelect.add(new Option('오후 잔여 (후) - 3시간 차감', '오후 잔여 (후)'));
+                detailSelect.add(new Option('오후 잔여 (야) - 3시간 차감', '오후 잔여 (야)'));
                 detailContainer.classList.remove('hidden');
             } else if (type === '토요일 잔여') {
-                detailSelect.add(new Option('토요일 잔여 (전) - 3시간 차감', '토요일 잔여 (전) - 3시간 차감'));
-                detailSelect.add(new Option('토요일 잔여 (후) - 3시간 차감', '토요일 잔여 (후) - 3시간 차감'));
-                detailSelect.add(new Option('토요일 잔여 (야) - 3시간 차감', '토요일 잔여 (야) - 3시간 차감'));
+                detailSelect.add(new Option('토요일 잔여 (전) - 3시간 차감', '토요일 잔여 (전)'));
+                detailSelect.add(new Option('토요일 잔여 (후) - 3시간 차감', '토요일 잔여 (후)'));
+                detailSelect.add(new Option('토요일 잔여 (야) - 3시간 차감', '토요일 잔여 (야)'));
                 detailContainer.classList.remove('hidden');
             } else {
                 detailContainer.classList.add('hidden');
@@ -836,10 +818,10 @@
                 leaveType = document.getElementById('leave-detail').value;
             }
 
-            // 프론트엔드 추가 방어 (제출 직전 다시 한번 인원 체크)
+            // 제출 직전 2차 검증
             if (leaveType !== '무급 휴가' && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
                 const pendingOrApproved = state.requests.filter(r => 
-                    r.leaveDate === leaveDate && 
+                    formatDate(r.leaveDate) === leaveDate && 
                     r.userRole === state.currentUser.role && 
                     r.status !== '반려' && 
                     r.type !== '무급 휴가'
@@ -910,7 +892,7 @@
                 originalStatus = targetReq.status;
                 targetReq.status = status;
                 
-                // 최종 승인될 때만 연차 차감
+                // 최종 승인될 때만 실제 데이터(DB) 차감하지만 UI 상으로는 이미 차감되어 보임
                 if (targetReq.userId === state.currentUser.id) {
                     const diff = getDeductionDaysLocally(targetReq.type);
                     if (originalStatus !== '최종 승인' && status === '최종 승인') {
@@ -940,7 +922,16 @@
             
             const totalLeave = parseFloat(u.total) || 0;
             const usedLeave = parseFloat(u.used) || 0;
-            const remainingLeave = totalLeave - usedLeave;
+            
+            // 💡 신청 직후 즉각적인 차감 효과를 보여주기 위해 '대기/1차승인' 건들도 프론트상에서 빼서 보여줌
+            let pendingLeaveDays = 0;
+            state.requests.forEach(r => {
+                if (r.userId === u.id && (r.status === '대기' || r.status === '1차 승인')) {
+                    pendingLeaveDays += getDeductionDaysLocally(r.type);
+                }
+            });
+
+            const remainingLeave = totalLeave - usedLeave - pendingLeaveDays;
 
             document.getElementById('total-leave').innerText = totalLeave;
             document.getElementById('remaining-leave').innerText = parseFloat(remainingLeave.toFixed(3));
