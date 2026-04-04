@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>서울더리본치과 연차 시스템</title>
+    <title>스마트 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -15,7 +15,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2); 
         }
         
-        /* 🚀 명확하고 일관된 가로 1열 정렬을 위한 전용 CSS */
+        /* 명확하고 일관된 가로 1열 정렬을 위한 전용 CSS */
         .form-row {
             display: flex;
             align-items: center;
@@ -24,7 +24,7 @@
             margin-bottom: 16px;
         }
         .label-text {
-            width: 90px; /* 고정된 너비로 입력칸 일자 정렬 완벽 보장 */
+            width: 90px; 
             font-size: 14px;
             font-weight: 700;
             color: #334155;
@@ -50,6 +50,13 @@
         }
         input::placeholder { color: #cbd5e1; }
         td, th { white-space: nowrap; }
+
+        /* 캘린더 전용 스타일 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 8px;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-[#f8fafc]">
@@ -113,7 +120,7 @@
                     <p class="text-xs sm:text-sm text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
                 </div>
 
-                <!-- 🚀 일렬 정렬된 로그인 폼 -->
+                <!-- 로그인 폼 -->
                 <form id="login-form" class="w-full">
                     <div class="form-row">
                         <label class="label-text">아이디</label>
@@ -131,7 +138,7 @@
                     </p>
                 </form>
 
-                <!-- 🚀 일렬 정렬된 회원가입 폼 -->
+                <!-- 회원가입 폼 -->
                 <form id="register-form" class="w-full hidden">
                     <div class="form-row">
                         <label class="label-text">이름</label>
@@ -188,6 +195,34 @@
                 </div>
             </nav>
 
+            <!-- 🚀 상단 커스텀 캘린더 영역 -->
+            <div id="calendar-section" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white p-5 sm:p-8 mb-6 sm:mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg sm:text-xl font-black text-slate-800 flex items-center gap-2">
+                        <i class="far fa-calendar-alt text-blue-500"></i> 일정 확인 및 선택
+                    </h3>
+                    <div class="flex items-center gap-4 bg-slate-100 p-1.5 rounded-xl">
+                        <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-blue-600 transition-all"><i class="fas fa-chevron-left"></i></button>
+                        <span id="calendar-month-year" class="font-black text-slate-700 w-24 text-center text-sm sm:text-base"></span>
+                        <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-blue-600 transition-all"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                
+                <!-- 캘린더 요일 헤더 -->
+                <div class="calendar-grid mb-2">
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-red-400 py-1">일</div>
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-slate-400 py-1">월</div>
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-slate-400 py-1">화</div>
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-red-400 py-1">수</div>
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-slate-400 py-1">목</div>
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-slate-400 py-1">금</div>
+                    <div class="text-center font-bold text-[11px] sm:text-xs text-blue-400 py-1">토</div>
+                </div>
+                
+                <!-- 캘린더 날짜 그리드 -->
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 <!-- 통계 및 연차 신청 (좌측 1단) -->
                 <div class="space-y-6">
@@ -202,8 +237,8 @@
                         </div>
                     </div>
 
-                    <!-- 🚀 깔끔하게 1열로 정렬된 연차 신청 폼 -->
-                    <div id="user-request-card" class="glass-morphism p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white">
+                    <!-- 연차 신청 폼 -->
+                    <div id="user-request-card" class="glass-morphism p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white relative">
                         <h3 class="text-base sm:text-lg font-black text-slate-800 mb-5 sm:mb-6 flex items-center gap-2">
                             <i class="fas fa-paper-plane text-blue-500"></i> 연차 신청
                         </h3>
@@ -211,23 +246,22 @@
                             
                             <div class="form-row">
                                 <label class="label-text">연차 일정</label>
-                                <input type="date" id="leave-date" required class="input-field">
+                                <!-- 달력 클릭 시 동기화 됨. 직접 입력도 가능 -->
+                                <input type="date" id="leave-date" required class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();">
                             </div>
                             
                             <div class="form-row">
                                 <label class="label-text">연차 유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer">
-                                    <option value="일반 연차">일반 연차</option>
-                                    <option value="오후 반차">오후 반차</option>
-                                    <option value="토요일 반차">토요일 반차</option>
-                                    <option value="무급 휴가">무급 휴가 (차감없음)</option>
+                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50">
+                                    <option value="" disabled selected>↑ 먼저 일정을 선택하세요</option>
+                                    <!-- JS에서 날짜(요일)에 따라 동적으로 채워집니다. -->
                                 </select>
                             </div>
 
-                            <!-- 🚀 반차 선택 시 나타나는 동적 상세 드롭다운 -->
+                            <!-- 반차 선택 시 나타나는 동적 상세 드롭다운 -->
                             <div id="detail-container" class="form-row hidden animate-in slide-in-from-top-2 duration-300">
                                 <label class="label-text">상세 선택</label>
-                                <select id="leave-detail" class="input-field cursor-pointer"></select>
+                                <select id="leave-detail" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold"></select>
                             </div>
 
                             <div class="form-row">
@@ -306,6 +340,10 @@
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8MMIq0F6g/exec"; 
 
         let state = { currentUser: null, requests: [] };
+        
+        // 🚀 캘린더 상태 관리 변수
+        let currentDate = new Date();
+        let selectedDateStr = '';
 
         function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
         function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
@@ -320,11 +358,11 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 💡 수정된 차감 헬퍼 (반차 5시간 / 잔여 3시간 차감 정확히 반영)
+        // 💡 차감 로직 (새로운 유형 완벽 반영)
         function getDeductionDaysLocally(type) {
             if (type.includes('무급 휴가')) return 0;
-            if (type === '오후 반차' || type === '토요일 반차') return 5 / 8;
-            if (type.includes('잔여')) return 3 / 8;
+            if (type.includes('반차 - 5시간 차감')) return 5 / 8; // 오후 반차, 토요일 반차
+            if (type.includes('잔여')) return 3 / 8; // 오후 잔여, 토요일 잔여
             return 1; // 일반 연차
         }
         
@@ -364,31 +402,152 @@
             }, 3000);
         }
 
-        // 🚀 연차 유형 동적 렌더링 (요청하신 목록 완벽 반영)
+        // 🚀 캘린더 렌더링 함수
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
+            
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            // 앞쪽 빈 칸 채우기
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            const todayStr = formatDate(new Date());
+
+            // 날짜 채우기
+            for (let i = 1; i <= lastDay; i++) {
+                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dayOfWeek = new Date(year, month, i).getDay();
+                
+                const cell = document.createElement('div');
+                const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); // 일(0), 수(3)
+                const isPast = dateStr < todayStr;
+                
+                // 기본 셀 스타일
+                cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[70px] `;
+                
+                if (isPast) {
+                    cell.classList.add('bg-slate-50', 'opacity-60', 'cursor-not-allowed');
+                } else {
+                    cell.classList.add('cursor-pointer', 'bg-white', 'hover:border-blue-300', 'hover:shadow-sm');
+                }
+                
+                // 선택된 날짜 하이라이트
+                if (dateStr === selectedDateStr) {
+                    cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-200');
+                    cell.classList.remove('border-slate-100', 'bg-white');
+                }
+
+                // 날짜 숫자
+                const dateNum = document.createElement('span');
+                dateNum.className = `text-[13px] sm:text-sm font-bold `;
+                if (dayOfWeek === 0 || dayOfWeek === 3) dateNum.classList.add('text-red-400');
+                else if (dayOfWeek === 6) dateNum.classList.add('text-blue-500');
+                else dateNum.classList.add('text-slate-700');
+                dateNum.innerText = i;
+                cell.appendChild(dateNum);
+
+                // 상태 뱃지 (마감 / 휴무 / 가능)
+                const statusBadge = document.createElement('span');
+                statusBadge.className = `mt-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md `;
+                
+                if (isPast) {
+                    statusBadge.className += 'bg-slate-200 text-slate-500';
+                    statusBadge.innerText = '마감';
+                } else if (isClosedDay) {
+                    statusBadge.className += 'bg-red-50 text-red-500';
+                    statusBadge.innerText = '휴무';
+                } else {
+                    statusBadge.className += 'bg-emerald-50 text-emerald-500';
+                    statusBadge.innerText = '가능';
+                }
+                cell.appendChild(statusBadge);
+
+                // 클릭 이벤트 (과거는 클릭 불가)
+                if (!isPast) {
+                    cell.onclick = () => {
+                        selectedDateStr = dateStr;
+                        document.getElementById('leave-date').value = dateStr;
+                        updateDropdownsForDate(dateStr);
+                        renderCalendar(); // 재렌더링하여 하이라이트 업데이트
+                    };
+                }
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        // 🚀 날짜(요일)에 따라 연차 유형 드롭다운 목록을 똑똑하게 제한
+        function updateDropdownsForDate(dateStr) {
+            const typeSelect = document.getElementById('leave-type');
+            const detailContainer = document.getElementById('detail-container');
+            const dateObj = new Date(dateStr);
+            const day = dateObj.getDay(); 
+
+            typeSelect.innerHTML = ''; 
+            detailContainer.classList.add('hidden');
+
+            if (isNaN(day)) {
+                typeSelect.add(new Option('↑ 먼저 일정을 선택하세요', ''));
+                return;
+            }
+
+            if (day === 0 || day === 3) {
+                // 수/일 (휴무일) -> 무급휴가만 가능
+                typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
+            } else if (day === 6) {
+                // 토요일
+                typeSelect.add(new Option('토요일 반차', '토요일 반차'));
+                typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
+            } else {
+                // 평일 (월, 화, 목, 금)
+                typeSelect.add(new Option('일반 연차 (1일)', '일반 연차'));
+                typeSelect.add(new Option('오후 반차', '오후 반차'));
+                typeSelect.add(new Option('오후 잔여', '오후 잔여'));
+                typeSelect.add(new Option('토요일 잔여', '토요일 잔여'));
+                typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
+            }
+            
+            // 목록 변경 후 자동으로 상세 드롭다운 갱신
+            handleLeaveTypeChange();
+        }
+
+        // 🚀 선택된 유형에 따른 하위(상세) 드롭다운 조작
         function handleLeaveTypeChange() {
             const type = document.getElementById('leave-type').value;
             const detailContainer = document.getElementById('detail-container');
             const detailSelect = document.getElementById('leave-detail');
             
-            detailSelect.innerHTML = ''; // 이전 목록 지우기
+            detailSelect.innerHTML = ''; // 초기화
 
             if (type === '오후 반차') {
-                const opts = [
-                    '오후 반차 - 5시간 차감',
-                    '오후 잔여 (전) - 3시간 차감',
-                    '오후 잔여 (후) - 3시간 차감',
-                    '오후 잔여 (야) - 3시간 차감'
-                ];
-                opts.forEach(opt => detailSelect.add(new Option(opt, opt.split(' -')[0])));
+                detailSelect.add(new Option('오후 반차 - 5시간 차감', '오후 반차 - 5시간 차감'));
                 detailContainer.classList.remove('hidden');
             } else if (type === '토요일 반차') {
-                const opts = [
-                    '토요일 반차 - 5시간 차감',
-                    '토요일 잔여 (전) - 3시간 차감',
-                    '토요일 잔여 (후) - 3시간 차감',
-                    '토요일 잔여 (야) - 3시간 차감'
-                ];
-                opts.forEach(opt => detailSelect.add(new Option(opt, opt.split(' -')[0])));
+                detailSelect.add(new Option('토요일 반차 - 5시간 차감', '토요일 반차 - 5시간 차감'));
+                detailContainer.classList.remove('hidden');
+            } else if (type === '오후 잔여') {
+                detailSelect.add(new Option('오후 잔여 (전) - 3시간 차감', '오후 잔여 (전) - 3시간 차감'));
+                detailSelect.add(new Option('오후 잔여 (후) - 3시간 차감', '오후 잔여 (후) - 3시간 차감'));
+                detailSelect.add(new Option('오후 잔여 (야) - 3시간 차감', '오후 잔여 (야) - 3시간 차감'));
+                detailContainer.classList.remove('hidden');
+            } else if (type === '토요일 잔여') {
+                detailSelect.add(new Option('토요일 잔여 (전) - 3시간 차감', '토요일 잔여 (전) - 3시간 차감'));
+                detailSelect.add(new Option('토요일 잔여 (후) - 3시간 차감', '토요일 잔여 (후) - 3시간 차감'));
+                detailSelect.add(new Option('토요일 잔여 (야) - 3시간 차감', '토요일 잔여 (야) - 3시간 차감'));
                 detailContainer.classList.remove('hidden');
             } else {
                 detailContainer.classList.add('hidden');
@@ -502,6 +661,9 @@
             } else {
                 document.getElementById('auth-section').classList.remove('hidden');
             }
+            
+            // 페이지 로드 시 캘린더 즉시 렌더링
+            renderCalendar();
         })();
 
         // --- 폼 이벤트 ---
@@ -593,6 +755,9 @@
                 document.getElementById('user-history').classList.remove('hidden');
                 document.getElementById('admin-panel').classList.add('hidden');
             }
+            
+            // 로그인 완료 후 캘린더 위치 맞춤
+            renderCalendar();
             renderDashboard();
         }
 
@@ -604,8 +769,12 @@
             const reason = document.getElementById('leave-reason').value;
             const handover = document.getElementById('leave-handover').value;
             
+            if (!leaveDate) {
+                return showAlert('위 달력에서 연차 일정을 먼저 선택해주세요.', 'error');
+            }
+
             let leaveType = document.getElementById('leave-type').value;
-            if (leaveType === '오후 반차' || leaveType === '토요일 반차') {
+            if (leaveType === '오후 반차' || leaveType === '토요일 반차' || leaveType === '오후 잔여' || leaveType === '토요일 잔여') {
                 leaveType = document.getElementById('leave-detail').value;
             }
 
@@ -632,8 +801,14 @@
             
             if (res) { 
                 showAlert('신청이 완료되었습니다.', 'success'); 
+                
+                // 성공 시 폼 리셋 및 캘린더 선택 해제
                 document.getElementById('leave-request-form').reset(); 
-                handleLeaveTypeChange(); 
+                selectedDateStr = '';
+                document.getElementById('leave-date').value = '';
+                updateDropdownsForDate('');
+                renderCalendar();
+
                 refreshData(false); 
             } else {
                 state.requests = state.requests.filter(r => r.id !== tempId);
