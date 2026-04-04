@@ -138,8 +138,15 @@
                     </p>
                 </form>
 
-                <!-- 회원가입 폼 -->
+                <!-- 회원가입 폼 (소속 팀 선택 추가됨) -->
                 <form id="register-form" class="w-full hidden">
+                    <div class="form-row">
+                        <label class="label-text">소속 팀</label>
+                        <select id="reg-team" required class="input-field cursor-pointer">
+                            <option value="user" selected>진료팀</option>
+                            <option value="desk">데스크팀</option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <label class="label-text">이름</label>
                         <input type="text" id="reg-name" required maxlength="3" class="input-field" placeholder="예: 홍길동">
@@ -185,7 +192,7 @@
                     </div>
                     <span class="text-lg sm:text-2xl font-black text-slate-800 tracking-tighter hidden sm:inline">서울더리본치과</span>
                     <span class="text-lg font-black text-slate-800 tracking-tighter sm:hidden">연차 관리</span>
-                    <span id="user-badge" class="ml-1 sm:ml-2 px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-100 text-blue-600 text-[9px] sm:text-[10px] font-black rounded-full uppercase border border-blue-200">USER</span>
+                    <span id="user-badge" class="ml-1 sm:ml-2 px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-100 text-blue-600 text-[9px] sm:text-[10px] font-black rounded-full border border-blue-200">USER</span>
                 </div>
                 <div class="flex items-center gap-3 sm:gap-4">
                     <span id="welcome-msg" class="text-xs sm:text-sm text-slate-700 font-bold hidden md:block"></span>
@@ -254,7 +261,7 @@
                                 <label class="label-text">연차 유형</label>
                                 <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50">
                                     <option value="" disabled selected>↑ 먼저 일정을 선택하세요</option>
-                                    <!-- JS에서 날짜(요일)에 따라 동적으로 채워집니다. -->
+                                    <!-- JS에서 날짜(요일) 및 팀 잔여 인원에 따라 동적으로 채워집니다. -->
                                 </select>
                             </div>
 
@@ -341,6 +348,14 @@
 
         let state = { currentUser: null, requests: [] };
         
+        // 🚀 권한(팀) 매핑 객체
+        const ROLE_MAP = {
+            'admin': '최고 관리자',
+            'subadmin': '중간관리자',
+            'desk': '데스크팀',
+            'user': '진료팀'
+        };
+
         // 🚀 캘린더 상태 관리 변수
         let currentDate = new Date();
         let selectedDateStr = '';
@@ -427,6 +442,19 @@
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 const dayOfWeek = new Date(year, month, i).getDay();
                 
+                // 해당 날짜에 나와 같은 소속 팀의 연차 인원 카운트 (무급 휴가, 반려 건 제외)
+                // 주의: 백엔드(GAS)가 요청자의 userRole을 반환해주도록 업데이트 되어야 완벽하게 작동합니다.
+                let myTeamCount = 0;
+                if (state.currentUser && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
+                    myTeamCount = state.requests.filter(r => 
+                        r.leaveDate === dateStr && 
+                        r.userRole === state.currentUser.role && 
+                        r.status !== '반려' &&
+                        r.type !== '무급 휴가'
+                    ).length;
+                }
+                const isTeamClosed = myTeamCount >= 1; // 1명이상 있으면 마감
+
                 const cell = document.createElement('div');
                 const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); // 일(0), 수(3)
                 const isPast = dateStr < todayStr;
@@ -455,7 +483,7 @@
                 dateNum.innerText = i;
                 cell.appendChild(dateNum);
 
-                // 상태 뱃지 (마감 / 휴무 / 가능)
+                // 상태 뱃지 (마감 / 연차마감 / 휴무 / 가능)
                 const statusBadge = document.createElement('span');
                 statusBadge.className = `mt-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md `;
                 
@@ -465,6 +493,9 @@
                 } else if (isClosedDay) {
                     statusBadge.className += 'bg-red-50 text-red-500';
                     statusBadge.innerText = '휴무';
+                } else if (isTeamClosed) {
+                    statusBadge.className += 'bg-orange-50 text-orange-500';
+                    statusBadge.innerText = '연차마감'; // 팀 인원 초과 시
                 } else {
                     statusBadge.className += 'bg-emerald-50 text-emerald-500';
                     statusBadge.innerText = '가능';
@@ -476,7 +507,7 @@
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
                         document.getElementById('leave-date').value = dateStr;
-                        updateDropdownsForDate(dateStr);
+                        updateDropdownsForDate(dateStr, isTeamClosed);
                         renderCalendar(); // 재렌더링하여 하이라이트 업데이트
                     };
                 }
@@ -490,8 +521,8 @@
             renderCalendar();
         }
 
-        // 🚀 날짜(요일)에 따라 연차 유형 드롭다운 목록을 똑똑하게 제한
-        function updateDropdownsForDate(dateStr) {
+        // 🚀 날짜(요일) 및 팀 제한 상태에 따라 연차 유형 드롭다운 목록을 똑똑하게 제한
+        function updateDropdownsForDate(dateStr, isTeamClosed = false) {
             const typeSelect = document.getElementById('leave-type');
             const detailContainer = document.getElementById('detail-container');
             const dateObj = new Date(dateStr);
@@ -508,6 +539,10 @@
             if (day === 0 || day === 3) {
                 // 수/일 (휴무일) -> 무급휴가만 가능
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
+            } else if (isTeamClosed) {
+                // 우리 팀 누군가 이미 연차를 낸 날 (연차 마감) -> 무급휴가만 가능
+                typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
+                showAlert('해당 일자는 팀 연차 인원이 마감되어 무급 휴가만 신청 가능합니다.', 'error');
             } else if (day === 6) {
                 // 토요일
                 typeSelect.add(new Option('토요일 반차', '토요일 반차'));
@@ -713,6 +748,7 @@
 
             const joinDateValue = document.getElementById('reg-join').value;
             const initialTotalLeave = calculateInitialLeave(joinDateValue);
+            const userRole = document.getElementById('reg-team').value; // 선택된 팀(role) 픽업
 
             const res = await apiCall('register', {
                 name: document.getElementById('reg-name').value,
@@ -721,7 +757,7 @@
                 joinDate: joinDateValue,
                 id: document.getElementById('reg-id').value,
                 pw: document.getElementById('reg-pw').value,
-                role: 'user',
+                role: userRole,
                 totalLeave: initialTotalLeave
             }, true);
 
@@ -745,9 +781,12 @@
             }
 
             document.getElementById('welcome-msg').innerText = `${user.name} 님`;
-            document.getElementById('user-badge').innerText = user.role.toUpperCase();
             
-            const isAdmin = user.role === 'admin';
+            // 배지에 팀명/권한 렌더링
+            document.getElementById('user-badge').innerText = ROLE_MAP[user.role] || user.role.toUpperCase();
+            
+            // 관리자인지 여부에 따라 패널 보이기/숨기기
+            const isAdmin = user.role === 'admin' || user.role === 'subadmin';
             if(isAdmin) {
                 document.getElementById('user-history').classList.add('hidden');
                 document.getElementById('admin-panel').classList.remove('hidden');
@@ -756,12 +795,12 @@
                 document.getElementById('admin-panel').classList.add('hidden');
             }
             
-            // 로그인 완료 후 캘린더 위치 맞춤
+            // 로그인 완료 후 캘린더 위치 및 제약사항 맞춤
             renderCalendar();
             renderDashboard();
         }
 
-        // 🚀 낙관적 연차 신청
+        // 🚀 연차 신청
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const requestDate = formatDate(new Date()); 
@@ -778,13 +817,29 @@
                 leaveType = document.getElementById('leave-detail').value;
             }
 
+            // 프론트엔드 추가 방어 (제출 직전 다시 한번 인원 체크)
+            if (leaveType !== '무급 휴가' && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
+                const count = state.requests.filter(r => 
+                    r.leaveDate === leaveDate && 
+                    r.userRole === state.currentUser.role && 
+                    r.status !== '반려' && 
+                    r.type !== '무급 휴가'
+                ).length;
+                if (count >= 1) {
+                    return showAlert('해당 날짜에 소속 팀의 연차 인원이 마감되었습니다.', 'error');
+                }
+            }
+
             const tempId = 'temp-' + Date.now();
             const newReq = {
                 id: tempId, userId: state.currentUser.id, userName: state.currentUser.name,
+                userRole: state.currentUser.role, // 팀 제한 감지를 위해 프론트 로직상 추가
                 requestDate: requestDate, leaveDate: leaveDate, type: leaveType, 
                 reason: reason, handover: handover, status: '대기'
             };
             state.requests.unshift(newReq);
+            
+            renderCalendar();
             renderDashboard();
 
             const btn = e.target.querySelector('button[type="submit"]');
@@ -794,6 +849,7 @@
 
             const res = await apiCall('requestLeave', {
                 userId: state.currentUser.id, userName: state.currentUser.name,
+                userRole: state.currentUser.role, // GAS 백엔드가 이 항목을 받아서 저장하게 업데이트 되어야 완벽해짐
                 requestDate, leaveDate, type: leaveType, reason, handover
             }, true);
 
@@ -812,6 +868,7 @@
                 refreshData(false); 
             } else {
                 state.requests = state.requests.filter(r => r.id !== tempId);
+                renderCalendar();
                 renderDashboard();
             }
         };
@@ -822,11 +879,12 @@
             if (res) { 
                 state.currentUser = res.user; state.requests = res.requests;
                 sessionStorage.setItem('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
+                renderCalendar();
                 renderDashboard(); 
             }
         }
 
-        // 🚀 관리자 2차 승인 상태 변경
+        // 🚀 관리자 승인 상태 변경
         async function updateStatus(reqId, status) {
             const targetReq = state.requests.find(r => r.id == reqId);
             let originalStatus = '';
@@ -844,6 +902,7 @@
                         state.currentUser.used = (parseFloat(state.currentUser.used || 0) - diff).toString();
                     }
                 }
+                renderCalendar();
                 renderDashboard();
             }
 
@@ -853,6 +912,7 @@
                 refreshData(false); 
             } else {
                 if (targetReq) targetReq.status = originalStatus; 
+                renderCalendar();
                 renderDashboard();
             }
         }
@@ -884,7 +944,7 @@
                 detailEl.classList.add('hidden');
             }
             
-            if (u.role === 'user') {
+            if (u.role === 'user' || u.role === 'desk') {
                 const hist = document.getElementById('history-body'); 
                 hist.innerHTML = '';
                 
@@ -915,7 +975,7 @@
                 }
             }
             
-            if (u.role === 'admin') {
+            if (u.role === 'admin' || u.role === 'subadmin') {
                 const adminBody = document.getElementById('admin-queue-body'); 
                 adminBody.innerHTML = '';
                 
@@ -952,11 +1012,17 @@
                             `;
                         }
 
+                        // 백엔드 업데이트 전에는 req.userRole이 없을 수도 있으므로 방어 코드 작성
+                        const reqUserRole = req.userRole || '정보없음';
+                        const displayRole = ROLE_MAP[reqUserRole] || reqUserRole;
+
                         adminBody.innerHTML += `
                             <tr class="hover:bg-slate-50 transition-all font-medium border-b border-slate-50">
                                 <td class="p-3 sm:p-4 whitespace-nowrap">
-                                    <div class="font-black text-slate-800 text-[11px] sm:text-sm">${req.userName}</div>
-                                    <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold">${req.userId}</div>
+                                    <div class="font-black text-slate-800 text-[11px] sm:text-sm">
+                                        ${req.userName} <span class="text-[9px] text-blue-500 bg-blue-50 px-1 py-0.5 rounded ml-1">${displayRole}</span>
+                                    </div>
+                                    <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold mt-1">${req.userId}</div>
                                 </td>
                                 <td class="p-3 sm:p-4 whitespace-nowrap">
                                     <div class="text-xs font-black text-blue-500">${req.type}</div>
@@ -971,22 +1037,3 @@
                                     <span class="px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black ${color}">${req.status}</span>
                                 </td>
                                 <td class="p-3 sm:p-4 text-right whitespace-nowrap">
-                                    <div class="flex justify-end gap-1 sm:gap-1.5 flex-wrap w-[220px]">
-                                        ${actionBtns}
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                }
-            }
-        }
-
-        function logout() { 
-            sessionStorage.removeItem('leavepass_user');
-            localStorage.removeItem('leavepass_cache'); 
-            location.reload(); 
-        }
-    </script>
-</body>
-</html>
