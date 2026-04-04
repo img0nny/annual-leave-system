@@ -656,7 +656,7 @@
             closeConfirmModal();
             const res = await apiCall('deleteRequest', { requestId: targetId }, true);
             if (res) { 
-                showAlert('성공적으로 삭제되었습니다.', 'success'); 
+                showAlert('성공적으로 삭제/취소되었습니다.', 'success'); 
                 refreshData(true); 
             }
         };
@@ -775,7 +775,6 @@
             renderDashboard();
         }
 
-        // 🚀 폼 제출 이중 방어 완벽 구현
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const requestDate = formatDate(new Date()); 
@@ -790,12 +789,10 @@
                 leaveType = document.getElementById('leave-detail').value;
             }
 
-            // 🚀 1차 방어: 달력 클릭 시 마감되어 value가 ''로 비워진 경우 차단
             if (!leaveType) {
                 return showAlert('해당 일자는 연차 신청이 마감되었거나 선택할 수 없습니다.', 'error');
             }
 
-            // 🚀 2차 방어: 제출 직전 실제 데이터 기준으로 팀 정원 다시 체크 (일반 직원 한정)
             if (state.currentUser.role === 'desk' || state.currentUser.role === 'user') {
                 const teamRequests = state.requests.filter(r => 
                     formatDate(r.leaveDate) === leaveDate && 
@@ -873,6 +870,12 @@
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
                                       req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
                                       (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
+                        
+                        let cancelBtn = '';
+                        if (req.status === '대기' || req.status === '1차 승인') {
+                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all">취소</button>`;
+                        }
+
                         hist.innerHTML += `
                             <tr class="hover:bg-slate-50 transition-all font-medium">
                                 <td class="p-3 sm:p-5">
@@ -884,7 +887,10 @@
                                     <div class="text-[11px] sm:text-xs text-slate-500 mt-1">${req.reason}</div>
                                 </td>
                                 <td class="p-3 sm:p-5 text-right">
-                                    <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
+                                    <div class="flex items-center justify-end">
+                                        <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
+                                        ${cancelBtn}
+                                    </div>
                                 </td>
                             </tr>
                         `;
