@@ -24,7 +24,7 @@
             margin-bottom: 12px;
         }
         .label-text {
-            width: 100px; /* 라벨 너비 고정으로 입력칸 시작점 일치 */
+            width: 100px; 
             font-size: 14px;
             font-weight: 700;
             color: #334155;
@@ -427,6 +427,7 @@
             }, 3000);
         }
 
+        // 🚀 캘린더 렌더링 로직 (휴무일 클릭 차단 적용)
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -463,8 +464,16 @@
                 const isPast = dateStr < todayStr;
                 
                 cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[55px] sm:min-h-[70px] `;
-                if (isPast) cell.classList.add('bg-slate-50', 'opacity-60', 'cursor-not-allowed');
-                else cell.classList.add('cursor-pointer', 'bg-white', 'hover:border-blue-300', 'hover:shadow-sm');
+                
+                // 🚀 휴무일 또는 과거 날짜는 클릭 완전 차단 처리
+                if (isPast) {
+                    cell.classList.add('bg-slate-50', 'opacity-60', 'cursor-not-allowed');
+                } else if (isClosedDay) {
+                    cell.classList.add('cursor-not-allowed'); // 휴무일 클릭 방지 
+                } else {
+                    cell.classList.add('cursor-pointer', 'bg-white', 'hover:border-blue-300', 'hover:shadow-sm');
+                }
+                
                 if (dateStr === selectedDateStr) cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-200');
 
                 const dateNum = document.createElement('span');
@@ -495,7 +504,8 @@
                 }
                 cell.appendChild(statusBadge);
 
-                if (!isPast) {
+                // 🚀 과거 및 휴무일에는 클릭 이벤트 할당 안 함
+                if (!isPast && !isClosedDay) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
                         document.getElementById('leave-date').value = dateStr;
@@ -520,7 +530,7 @@
             typeSelect.innerHTML = ''; 
             detailContainer.classList.add('hidden');
 
-            if (isNaN(day)) {
+            if (isNaN(day) || day === 0 || day === 3) {
                 typeSelect.add(new Option('↑ 일정을 선택하세요', ''));
                 return;
             }
@@ -531,9 +541,7 @@
                 return;
             }
 
-            if (day === 0 || day === 3) {
-                typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
-            } else if (day === 6) {
+            if (day === 6) {
                 typeSelect.add(new Option('토요일 반차', '토요일 반차'));
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
             } else {
@@ -819,7 +827,6 @@
                 const adminBody = document.getElementById('admin-queue-body'); 
                 adminBody.innerHTML = '';
                 
-                // 🚀 어드민 검색 기능 로직 추가
                 const searchInput = document.getElementById('admin-search-name');
                 const searchKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
                 
@@ -835,12 +842,51 @@
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
                                       req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
                                       (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
-                        let actionBtns = `
-                            <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px] font-bold">1차</button>
-                            <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2 py-1 bg-emerald-500 text-white rounded text-[10px] font-bold">최종</button>
-                            <button onclick="updateStatus('${req.id}', '반려')" class="px-2 py-1 bg-rose-500 text-white rounded text-[10px] font-bold">반려</button>
-                            <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
-                        `;
+                        
+                        // 🚀 권한에 따른 1차/최종 승인 2단계 프로세스 버튼 렌더링
+                        let actionBtns = '';
+                        if (u.role === 'subadmin') {
+                            if (req.status === '대기') {
+                                actionBtns = `
+                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px] font-bold">1차 승인</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2 py-1 bg-rose-500 text-white rounded text-[10px] font-bold">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                                `;
+                            } else if (req.status === '1차 승인') {
+                                actionBtns = `
+                                    <button onclick="updateStatus('${req.id}', '대기')" class="px-2 py-1 bg-amber-400 text-white rounded text-[10px] font-bold">대기 전환</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2 py-1 bg-rose-500 text-white rounded text-[10px] font-bold">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                                `;
+                            } else {
+                                actionBtns = `<button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>`;
+                            }
+                        } else if (u.role === 'admin') {
+                            if (req.status === '대기') {
+                                actionBtns = `
+                                    <span class="px-2 py-1 text-slate-400 text-[10px] font-bold">1차 대기중</span>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2 py-1 bg-rose-500 text-white rounded text-[10px] font-bold">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                                `;
+                            } else if (req.status === '1차 승인') {
+                                actionBtns = `
+                                    <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2 py-1 bg-emerald-500 text-white rounded text-[10px] font-bold">최종 승인</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2 py-1 bg-rose-500 text-white rounded text-[10px] font-bold">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                                `;
+                            } else if (req.status === '최종 승인') {
+                                actionBtns = `
+                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2 py-1 bg-blue-400 text-white rounded text-[10px] font-bold">1차 강등</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2 py-1 bg-rose-500 text-white rounded text-[10px] font-bold">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                                `;
+                            } else if (req.status === '반려') {
+                                actionBtns = `
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2 py-1 bg-slate-400 text-white rounded text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                                `;
+                            }
+                        }
+
                         adminBody.innerHTML += `
                             <tr class="hover:bg-slate-50 transition-all font-medium border-b border-slate-50">
                                 <td class="p-3 sm:p-4">
