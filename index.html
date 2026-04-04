@@ -461,15 +461,16 @@
                 if (state.currentUser) {
                     const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
                     
+                    // 🚀 달력에는 모든 팀의 내역이 동일하게 표시되도록 필터링 생략
                     dayRequests = state.requests.filter(r => 
                         formatDate(r.leaveDate) === dateStr && r.status !== '반려'
                     );
 
                     if (!isAdmin) {
+                        // 🚀 폼 신청 정원 차단을 위한 계산 로직은 '본인 소속 팀'에 한정
                         const teamRequests = dayRequests.filter(r => r.userRole === state.currentUser.role);
                         teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
                         teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
-                        dayRequests = teamRequests; 
                     } else {
                         teamApprovedCount = 0;
                         teamPendingCount = 0;
@@ -509,6 +510,7 @@
                 const statusBadge = document.createElement('span');
                 statusBadge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md truncate max-w-[60%] text-center `;
                 
+                // 🚀 상단 배지는 내 팀의 기준에 따라 표시됨
                 if (isPast) {
                     statusBadge.className += 'bg-slate-100 text-slate-400';
                     statusBadge.innerText = '마감';
@@ -517,7 +519,7 @@
                     statusBadge.innerText = '휴무';
                 } else if (isTeamClosed) {
                     statusBadge.className += 'bg-red-50 text-red-600';
-                    statusBadge.innerText = '마감'; 
+                    statusBadge.innerText = '연차마감'; 
                 } else if (isTeamPending) {
                     statusBadge.className += 'bg-yellow-50 text-yellow-600';
                     statusBadge.innerText = '승인중'; 
@@ -531,6 +533,7 @@
                 const reqList = document.createElement('div');
                 reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
                 
+                // 🚀 모든 팀의 내역을 캘린더에 렌더링
                 dayRequests.forEach(req => {
                     const reqItem = document.createElement('div');
                     const colorClass = (req.status === '최종 승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
@@ -553,7 +556,7 @@
                         selectedDateStr = dateStr;
                         if (!isPast) {
                             document.getElementById('leave-date').value = dateStr;
-                            updateDropdownsForDate(dateStr);
+                            updateDropdownsForDate(dateStr, isTeamClosed, isTeamPending);
                         } else {
                             document.getElementById('leave-date').value = '';
                             updateDropdownsForDate(''); 
@@ -570,8 +573,7 @@
             renderCalendar();
         }
 
-        // 🚀 입력 폼 방어 로직 (마감된 날짜 선택 시 폼 자체를 닫아버림)
-        function updateDropdownsForDate(dateStr) {
+        function updateDropdownsForDate(dateStr, isTeamClosed = false, isTeamPending = false) {
             const typeSelect = document.getElementById('leave-type');
             const detailContainer = document.getElementById('detail-container');
             const submitBtn = document.getElementById('submit-btn');
@@ -603,8 +605,8 @@
             }
 
             // 3. 팀 정원 상태 조회 (수동 입력 시 방어 위해 내부에서 직접 조회)
-            let isTeamClosed = false;
-            let isTeamPending = false;
+            let currentTeamClosed = false;
+            let currentTeamPending = false;
 
             if (state.currentUser && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
                 const teamRequests = state.requests.filter(r => 
@@ -615,12 +617,12 @@
                 const approved = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
                 const pending = teamRequests.filter(r => r.status === '대기').length;
                 
-                isTeamClosed = approved >= 1; 
-                isTeamPending = !isTeamClosed && (pending >= 1);
+                currentTeamClosed = approved >= 1; 
+                currentTeamPending = !currentTeamClosed && (pending >= 1);
             }
 
-            // 4. 정원 마감 시 폼 비활성화
-            if (isTeamClosed || isTeamPending) {
+            // 4. 내 소속 팀의 정원 마감 시 폼 비활성화
+            if (currentTeamClosed || currentTeamPending) {
                 typeSelect.add(new Option('신청 정원 마감', ''));
                 typeSelect.disabled = true;
                 typeSelect.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed';
