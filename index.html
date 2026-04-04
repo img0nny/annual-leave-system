@@ -328,6 +328,17 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- 🚀 검색된 직원의 연차 요약 정보 표시 영역 -->
+                        <div id="admin-search-summary" class="hidden px-4 sm:px-6 py-4 bg-blue-50/30 border-b border-blue-100 flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all">
+                            <div class="text-sm font-black text-slate-800"><span id="search-summary-name" class="text-blue-600 text-lg"></span> 님의 연차 현황</div>
+                            <div class="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs font-bold w-full sm:w-auto">
+                                <div class="flex-1 sm:flex-none bg-white px-3 py-2 rounded-lg shadow-sm border border-slate-100 text-center">총: <span id="search-summary-total" class="text-slate-800 text-sm">0</span>일</div>
+                                <div class="flex-1 sm:flex-none bg-white px-3 py-2 rounded-lg shadow-sm border border-slate-100 text-center">사용: <span id="search-summary-used" class="text-rose-500 text-sm">0</span>일</div>
+                                <div class="flex-1 sm:flex-none bg-white px-3 py-2 rounded-lg shadow-sm border border-blue-200 ring-1 ring-blue-500 text-center">잔여: <span id="search-summary-remain" class="text-blue-600 text-sm font-black">0</span>일</div>
+                            </div>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[700px]">
                                 <thead>
@@ -829,10 +840,64 @@
                 
                 const searchInput = document.getElementById('admin-search-name');
                 const searchKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+                const searchSummaryEl = document.getElementById('admin-search-summary');
                 
                 let filteredRequests = state.requests;
+                
                 if (searchKeyword) {
                     filteredRequests = filteredRequests.filter(req => req.userName.toLowerCase().includes(searchKeyword));
+                    
+                    // 🚀 검색 기능 시 해당 직원의 요약 정보 표시
+                    const matchedUserNames = [...new Set(filteredRequests.map(r => r.userName))];
+                    if (matchedUserNames.length === 1) {
+                        const targetName = matchedUserNames[0];
+                        const targetId = filteredRequests.find(r => r.userName === targetName).userId;
+                        
+                        let total = 15; // 💡 GAS 연동 전 임시 기본값
+                        let used = 0;
+                        
+                        if (state.allUsers) {
+                            // GAS 연동 후: 정확한 DB 정보 사용
+                            const foundUser = state.allUsers.find(user => user.id === targetId);
+                            if (foundUser) {
+                                total = parseFloat(foundUser.total) || 0;
+                                used = parseFloat(foundUser.used) || 0;
+                                // 대기 및 1차 승인 중인 건 차감 합산
+                                filteredRequests.forEach(r => {
+                                    if (r.userId === targetId && (r.status === '대기' || r.status === '1차 승인')) {
+                                        used += getDeductionDaysLocally(r.type);
+                                    }
+                                });
+                            }
+                        } else {
+                            // GAS 연동 전: 화면에 있는 신청 내역만으로 계산
+                            filteredRequests.forEach(r => {
+                                if (r.status === '최종 승인' || r.status === '1차 승인' || r.status === '대기') {
+                                    used += getDeductionDaysLocally(r.type);
+                                }
+                            });
+                        }
+                        
+                        const remain = total - used;
+                        
+                        document.getElementById('search-summary-name').innerText = targetName;
+                        document.getElementById('search-summary-total').innerText = total;
+                        document.getElementById('search-summary-used').innerText = parseFloat(used.toFixed(3));
+                        document.getElementById('search-summary-remain').innerText = parseFloat(remain.toFixed(3));
+                        
+                        searchSummaryEl.classList.remove('hidden');
+                        searchSummaryEl.classList.add('flex');
+                    } else {
+                        searchSummaryEl.classList.add('hidden');
+                        searchSummaryEl.classList.remove('flex');
+                    }
+                } else {
+                    // 검색어가 없을 때
+                    filteredRequests = state.requests; 
+                    if (searchSummaryEl) {
+                        searchSummaryEl.classList.add('hidden');
+                        searchSummaryEl.classList.remove('flex');
+                    }
                 }
 
                 if (filteredRequests.length === 0) {
@@ -843,7 +908,6 @@
                                       req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
                                       (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
                         
-                        // 🚀 권한에 따른 1차/최종 승인 2단계 프로세스 버튼 렌더링
                         let actionBtns = '';
                         if (u.role === 'subadmin') {
                             if (req.status === '대기') {
