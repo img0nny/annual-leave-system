@@ -231,7 +231,7 @@
             return t;
         };
 
-        const showAlert = (msg, t = 'info') => {
+        const showAlert = (msg, type = 'info') => {
             const container = document.getElementById('alert-container');
             const div = document.createElement('div');
             const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
@@ -300,8 +300,10 @@
                 return;
             }
             const day = new Date(date).getDay();
+            
+            // 🚀 '오후 반차 잔여' 옵션을 목록에 추가 (요청 사항 반영)
             if (day === 6) { select.add(new Option('토요일 반차', '토요일 반차')); select.add(new Option('무급 휴가', '무급 휴가')); }
-            else { ['일반 연차', '오후 반차', '오후 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
+            else { ['일반 연차', '오후 반차', '오후 반차 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
             handleLeaveTypeChange();
         }
 
@@ -311,7 +313,10 @@
             
             // 🚀 잔여 여부를 먼저 체크하여 '오후 반차 잔여'가 올바른 옵션을 타도록 순서 변경
             if (type.includes('잔여')) { 
-                ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); 
+                let displayType = type;
+                if (type === '오후 반차 잔여') displayType = '오후 잔여'; // UI 상으로는 '오후 잔여'로 표시 유지
+                
+                ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${displayType} (${v}) - 3시간 차감`, `${type} (${v})`))); 
                 box.classList.remove('hidden'); 
             }
             else if (type.includes('반차')) { 
@@ -353,7 +358,7 @@
 
             const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
-            // 🚀 일반 사원 패널 (PC 표 / 모바일 상하 분리 카드)
+            // 일반 사원 패널
             if (!isAdmin) {
                 const body = document.getElementById('history-body'); body.innerHTML = '';
                 const filtered = state.requests.filter(r => r.userId === u.id);
@@ -413,7 +418,7 @@
                 }
             }
             
-            // 🚀 관리자 패널 (PC 표 / 모바일 상하 분리 카드)
+            // 관리자 패널
             if (isAdmin) {
                 const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
                 const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
