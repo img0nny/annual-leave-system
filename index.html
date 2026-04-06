@@ -187,8 +187,8 @@
 
         <!-- 메인 섹션 -->
         <div id="main-section" class="hidden">
-            <!-- 🚀 네비게이션: 모바일과 PC 모두 한 줄(가로) 정렬 완벽 보장 -->
-            <nav class="flex justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white gap-4">
+            <!-- 🚀 네비게이션: 로그아웃 버튼 터치 오류 완벽 해결 (배치 방식 수정) -->
+            <nav class="flex flex-row justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white w-full relative z-50">
                 <div class="flex items-center gap-3 sm:gap-4">
                     <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-lg shrink-0">
                         <i class="fas fa-calendar-check text-lg sm:text-2xl"></i>
@@ -198,9 +198,9 @@
                         <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter"></h2>
                     </div>
                 </div>
-                <!-- 🚀 로그아웃 버튼의 독립적 배치로 클릭 방해 요소를 차단 -->
-                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer">
-                    <i class="fas fa-sign-out-alt text-xl sm:text-2xl"></i>
+                <!-- 로그아웃 버튼: 오버레이 방섭 없이 100% 클릭 가능하게 독립 배치 -->
+                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer pointer-events-auto" style="z-index: 100;">
+                    <i class="fas fa-sign-out-alt text-xl sm:text-2xl pointer-events-none"></i>
                 </button>
             </nav>
 
@@ -228,14 +228,7 @@
                 </div>
                 
                 <div id="calendar-grid" class="calendar-grid"></div>
-
-                <!-- 🚀 캘린더 날짜 클릭 시 나타나는 깔끔한 요약 박스 -->
-                <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm animate-in fade-in slide-in-from-top-2">
-                    <h4 class="text-xs sm:text-sm font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                        <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
-                    </h4>
-                    <div id="date-summary-list" class="flex flex-col"></div>
-                </div>
+                <!-- 🚀 말풍선 영역 완전히 삭제됨 -->
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -290,18 +283,16 @@
                                 <i class="fas fa-sync-alt mr-1"></i> 새로고침
                             </button>
                         </div>
-                        <!-- 🚀 가로로 스크롤되는 정통 표 형식 유지 -->
-                        <div class="overflow-x-auto p-1">
-                            <table class="w-full text-left min-w-[500px]">
-                                <thead>
-                                    <tr class="bg-slate-50/80">
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
-                                        <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                        
+                        <!-- 🚀 일반 직원용 목록: 가로 스크롤 없이 [일정] [유형] [사유] [인수] 가로 나열 적용 -->
+                        <div class="w-full flex flex-col">
+                            <div class="grid grid-cols-4 gap-2 w-full p-3 bg-slate-50/80 border-b border-slate-100 text-center">
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">일정</div>
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">유형</div>
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">사유</div>
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">인수</div>
+                            </div>
+                            <div id="history-body" class="flex flex-col w-full bg-slate-50/30 sm:bg-white p-2 sm:p-0"></div>
                         </div>
                     </div>
 
@@ -332,20 +323,15 @@
                             </div>
                         </div>
 
-                        <!-- 🚀 가로로 스크롤되는 정통 표 형식 유지 -->
-                        <div class="overflow-x-auto p-1">
-                            <table class="w-full text-left min-w-[700px]">
-                                <thead>
-                                    <tr class="bg-slate-50/80">
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
-                                        <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-queue-body" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                        <!-- 🚀 어드민 관리자용 목록: 가로 스크롤 없이 [일정] [유형] [사유] [인수] 가로 나열 적용 -->
+                        <div class="w-full flex flex-col">
+                            <div class="grid grid-cols-4 gap-2 w-full p-3 bg-slate-50/80 border-b border-slate-100 text-center">
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">일정</div>
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">유형</div>
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">사유</div>
+                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">인수</div>
+                            </div>
+                            <div id="admin-queue-body" class="flex flex-col w-full bg-slate-50/30 sm:bg-white p-2 sm:p-0"></div>
                         </div>
                     </div>
                 </div>
@@ -464,12 +450,11 @@
                 
                 let teamApprovedCount = 0;
                 let teamPendingCount = 0;
-                let allDayRequests = []; 
 
                 if (state.currentUser) {
                     const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
                     
-                    allDayRequests = state.requests.filter(r => 
+                    const allDayRequests = state.requests.filter(r => 
                         formatDate(r.leaveDate) === dateStr && r.status !== '반려'
                     );
 
@@ -490,7 +475,7 @@
                 const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
                 const isPast = dateStr < todayStr;
                 
-                // 🚀 깔끔하게 뱃지만 표시되도록 높이와 패딩을 원복
+                // 🚀 말풍선 제거 및 달력 칸을 깔끔한 형태로 원복
                 cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
                 
                 if (isClosedDay) {
@@ -512,7 +497,7 @@
                 cell.appendChild(dateNum);
 
                 const statusBadge = document.createElement('span');
-                statusBadge.className = `mt-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md w-full text-center `;
+                statusBadge.className = `mt-1.5 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md w-full text-center `;
                 
                 if (isPast) {
                     statusBadge.className += 'bg-slate-100 text-slate-400';
@@ -542,64 +527,11 @@
                             document.getElementById('leave-date').value = '';
                             updateDropdownsForDate(''); 
                         }
-                        renderDateSummary(dateStr, allDayRequests); 
                         renderCalendar(); 
                     };
                 }
                 grid.appendChild(cell);
             }
-            
-            if (selectedDateStr) {
-                const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && r.status !== '반려');
-                renderDateSummary(selectedDateStr, allDayRequests);
-            } else {
-                document.getElementById('date-summary-container').classList.add('hidden');
-            }
-        }
-
-        // 🚀 클릭 시 모바일/PC 모두 완벽한 가로 나열 박스 렌더링
-        function renderDateSummary(dateStr, dayRequests) {
-            const container = document.getElementById('date-summary-container');
-            const listEl = document.getElementById('date-summary-list');
-            const dateText = document.getElementById('summary-date-text');
-
-            if (!dateStr) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            dateText.innerText = dateStr;
-            listEl.innerHTML = '';
-
-            if (!dayRequests) {
-                dayRequests = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && r.status !== '반려');
-            }
-
-            if (dayRequests.length === 0) {
-                listEl.innerHTML = '<div class="text-[11px] sm:text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center border border-slate-100">이 날짜에 신청된 연차가 없습니다.</div>';
-            } else {
-                dayRequests.forEach(req => {
-                    const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
-                                  req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
-                                  'bg-yellow-100 text-yellow-600';
-                    const roleName = ROLE_MAP[req.userRole] || req.userRole;
-
-                    // 🚀 가로로 완벽히 정렬되는 디자인 (flex-row 강제)
-                    listEl.innerHTML += `
-                        <div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                            <div class="flex flex-row items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                                <div class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5 shrink-0">
-                                    ${req.userName} 
-                                    <span class="text-[9px] sm:text-[10px] text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">${roleName}</span>
-                                </div>
-                                <div class="text-[11px] sm:text-xs font-bold text-slate-500 truncate">${req.type}</div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-black ${color} shrink-0 ml-2">${req.status}</span>
-                        </div>
-                    `;
-                });
-            }
-            container.classList.remove('hidden');
         }
 
         function changeMonth(delta) {
@@ -725,17 +657,6 @@
             document.getElementById('confirm-modal').classList.add('hidden');
         }
 
-        document.getElementById('confirm-delete-btn').onclick = async () => {
-            if (!deleteTargetId) return;
-            const targetId = deleteTargetId;
-            closeConfirmModal();
-            const res = await apiCall('deleteRequest', { requestId: targetId }, true);
-            if (res) { 
-                showAlert('성공적으로 삭제/취소되었습니다.', 'success'); 
-                refreshData(true); 
-            }
-        };
-
         function toggleLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function toggleAuthMode(isRegister) {
             document.getElementById('login-form').classList.toggle('hidden', isRegister);
@@ -766,61 +687,6 @@
             }
         }
 
-        (function checkSessionAndInit() {
-            const savedDataStr = safeStorage.get('leavepass_user');
-            let user = null; let requests = [];
-            if (savedDataStr) {
-                try {
-                    const parsed = JSON.parse(savedDataStr);
-                    if (parsed.user) { user = parsed.user; requests = parsed.requests || []; } 
-                    else { user = parsed; }
-                } catch(e) {}
-            }
-            if (user) {
-                loginSuccess(user, requests, false);
-                apiCall('fetchData', { id: user.id, role: user.role }, false).then(res => {
-                    if (res && res.user) {
-                        state.currentUser = res.user; state.requests = res.requests;
-                        if (res.allUsers) state.allUsers = res.allUsers; 
-                        safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
-                        renderCalendar();
-                        renderDashboard();
-                    } 
-                });
-            } else {
-                document.getElementById('auth-section').classList.remove('hidden');
-                renderCalendar();
-            }
-        })();
-
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('login-id').value;
-            const pw = document.getElementById('login-pw').value;
-            const res = await apiCall('login', { id, pw }, true); 
-            if (res && res.user) {
-                safeStorage.set('leavepass_cache', JSON.stringify({ id, pw, user: res.user, requests: res.requests }), true);
-                loginSuccess(res.user, res.requests, true);
-            }
-        };
-
-        document.getElementById('register-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const joinDateValue = document.getElementById('reg-join').value;
-            const initialTotalLeave = calculateInitialLeave(joinDateValue);
-            const res = await apiCall('register', {
-                name: document.getElementById('reg-name').value,
-                birth: document.getElementById('reg-birth').value,
-                phone: document.getElementById('reg-phone').value,
-                joinDate: joinDateValue,
-                id: document.getElementById('reg-id').value,
-                pw: document.getElementById('reg-pw').value,
-                role: document.getElementById('reg-team').value,
-                totalLeave: initialTotalLeave
-            }, true);
-            if (res) showSuccessModal(); 
-        };
-
         function loginSuccess(user, requests = [], showWelcomeMsg = true) {
             state.currentUser = user; state.requests = requests;
             safeStorage.set('leavepass_user', JSON.stringify({user, requests}));
@@ -849,62 +715,6 @@
             renderCalendar();
             renderDashboard();
         }
-
-        document.getElementById('leave-request-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const requestDate = formatDate(new Date()); 
-            const leaveDate = document.getElementById('leave-date').value;
-            const reason = document.getElementById('leave-reason').value;
-            const handover = document.getElementById('leave-handover').value;
-            
-            if (!leaveDate) return showAlert('일정을 먼저 선택하세요.', 'error');
-            
-            let leaveType = document.getElementById('leave-type').value;
-            if (document.getElementById('detail-container').classList.contains('hidden') === false) {
-                leaveType = document.getElementById('leave-detail').value;
-            }
-
-            if (!leaveType) {
-                return showAlert('유효하지 않은 일정입니다. 다시 선택해주세요.', 'error');
-            }
-
-            if (state.currentUser.role === 'desk' || state.currentUser.role === 'user') {
-                const teamRequests = state.requests.filter(r => 
-                    formatDate(r.leaveDate) === leaveDate && 
-                    r.userRole === state.currentUser.role && 
-                    r.status !== '반려'
-                );
-                
-                if (teamRequests.length >= 1) {
-                    return showAlert('이미 누군가 선점했습니다. 다른 날짜를 선택해주세요.', 'error');
-                }
-            }
-
-            const btn = e.target.querySelector('button[type="submit"]');
-            const originalText = btn.innerText;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
-            btn.disabled = true;
-
-            const res = await apiCall('requestLeave', {
-                userId: state.currentUser.id, userName: state.currentUser.name,
-                userRole: state.currentUser.role, requestDate, leaveDate, type: leaveType, reason, handover
-            }, true);
-            
-            if (res) { 
-                showAlert('신청이 완료되었습니다.', 'success'); 
-                document.getElementById('leave-request-form').reset(); 
-                selectedDateStr = '';
-                updateDropdownsForDate('');
-                
-                const container = document.getElementById('date-summary-container');
-                if(container) container.classList.add('hidden');
-                
-                refreshData(true); 
-            } else {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        };
 
         async function refreshData(showLoader = true) {
             if (!state.currentUser) return;
@@ -946,7 +756,7 @@
                 hist.innerHTML = '';
                 let myRequests = state.requests.filter(r => r.userId === u.id);
                 if (myRequests.length === 0) {
-                    hist.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>';
+                    hist.innerHTML = '<div class="p-6 text-center text-slate-300 font-bold w-full">내역이 없습니다.</div>';
                 } else {
                     myRequests.forEach(req => {
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
@@ -955,28 +765,26 @@
                         
                         let cancelBtn = '';
                         if (req.status === '대기' || req.status === '1차 승인') {
-                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="ml-2 px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-black transition-all">취소</button>`;
+                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all">취소</button>`;
                         }
 
-                        // 🚀 일반 사용자: 가로 스크롤 가능한 정통 테이블
+                        // 🚀 일반 사용자 목록: 4단 가로 배열 (모바일/PC 모두 완벽한 가로)
                         hist.innerHTML += `
-                            <tr class="hover:bg-slate-50 transition-all font-medium">
-                                <td class="p-3 sm:p-5">
-                                    <div class="text-xs sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[11px] sm:text-xs font-black text-blue-500 mt-1">${req.type}</div>
-                                    <div class="text-[10px] sm:text-xs text-slate-400 mt-1">신청: ${formatDate(req.requestDate)}</div>
-                                </td>
-                                <td class="p-3 sm:p-5">
-                                    <div class="text-xs sm:text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                    <div class="text-xs sm:text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
-                                </td>
-                                <td class="p-3 sm:p-5 text-right">
-                                    <div class="flex items-center justify-end">
-                                        <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
+                            <div class="flex flex-col bg-white border border-slate-200 sm:border-x-0 sm:border-t-0 sm:border-b sm:border-slate-100 p-3 sm:p-4 rounded-xl sm:rounded-none mb-3 sm:mb-0 w-full hover:bg-slate-50 transition-all shadow-sm sm:shadow-none">
+                                <div class="flex justify-between items-center mb-2 sm:mb-3 pb-2 border-b border-slate-50">
+                                    <span class="text-[10px] sm:text-[11px] text-slate-400 font-bold">신청일: ${formatDate(req.requestDate)}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-black ${color}">${req.status}</span>
                                         ${cancelBtn}
                                     </div>
-                                </td>
-                            </tr>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2 text-center items-center w-full">
+                                    <div class="text-[10px] sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
+                                    <div class="text-[10px] sm:text-sm font-black text-blue-500">${req.type}</div>
+                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.reason}">${req.reason}</div>
+                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.handover}">${req.handover}</div>
+                                </div>
+                            </div>
                         `;
                     });
                 }
@@ -1044,7 +852,7 @@
                 }
 
                 if (filteredRequests.length === 0) {
-                    adminBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400 font-bold text-sm">검색된 내역이 없거나 등록된 신청이 없습니다.</td></tr>';
+                    adminBody.innerHTML = '<div class="p-6 text-center text-slate-400 font-bold text-sm w-full">검색된 내역이 없거나 등록된 신청이 없습니다.</div>';
                 } else {
                     filteredRequests.forEach(req => {
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
@@ -1094,33 +902,152 @@
                             }
                         }
 
-                        // 🚀 관리자: 가로 스크롤 가능한 정통 테이블
+                        // 🚀 관리자 큐 목록: 4단 가로 배열 (모바일/PC 모두 완벽한 가로)
                         adminBody.innerHTML += `
-                            <tr class="hover:bg-slate-50 transition-all font-medium">
-                                <td class="p-3 sm:p-4">
-                                    <div class="font-black text-slate-800 text-xs sm:text-sm">${req.userName}</div>
-                                    <div class="text-[10px] sm:text-xs text-slate-400 font-bold mt-1">${ROLE_MAP[req.userRole] || req.userRole}</div>
-                                </td>
-                                <td class="p-3 sm:p-4">
-                                    <div class="text-xs sm:text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[10px] sm:text-xs font-black text-blue-500 mt-1">${req.type}</div>
-                                </td>
-                                <td class="p-3 sm:p-4 whitespace-normal break-keep">
-                                    <div class="text-xs sm:text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                    <div class="text-xs sm:text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
-                                </td>
-                                <td class="p-3 sm:p-4 align-middle">
-                                    <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
-                                </td>
-                                <td class="p-3 sm:p-4 text-right">
-                                    <div class="flex justify-end gap-1.5 flex-wrap">${actionBtns}</div>
-                                </td>
-                            </tr>
+                            <div class="flex flex-col bg-white border border-slate-200 sm:border-x-0 sm:border-t-0 sm:border-b sm:border-slate-100 p-3 sm:p-4 rounded-xl sm:rounded-none mb-3 sm:mb-0 w-full hover:bg-slate-50 transition-all shadow-sm sm:shadow-none">
+                                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-50">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-black text-slate-800">${req.userName}</span>
+                                        <span class="text-[9px] sm:text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">${ROLE_MAP[req.userRole] || req.userRole}</span>
+                                    </div>
+                                    <span class="px-2.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-black ${color}">${req.status}</span>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2 text-center items-center w-full">
+                                    <div class="text-[10px] sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
+                                    <div class="text-[10px] sm:text-sm font-black text-blue-500">${req.type}</div>
+                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.reason}">${req.reason}</div>
+                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.handover}">${req.handover}</div>
+                                </div>
+                                <div class="flex justify-end gap-1.5 mt-2 pt-2 border-t border-slate-50 w-full">
+                                    ${actionBtns}
+                                </div>
+                            </div>
                         `;
                     });
                 }
             }
         }
+
+        // DOM 생성 완료 후 모든 스크립트 안전하게 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            (function checkSessionAndInit() {
+                const savedDataStr = safeStorage.get('leavepass_user');
+                let user = null; let requests = [];
+                if (savedDataStr) {
+                    try {
+                        const parsed = JSON.parse(savedDataStr);
+                        if (parsed.user) { user = parsed.user; requests = parsed.requests || []; } 
+                        else { user = parsed; }
+                    } catch(e) {}
+                }
+                if (user) {
+                    loginSuccess(user, requests, false);
+                    apiCall('fetchData', { id: user.id, role: user.role }, false).then(res => {
+                        if (res && res.user) {
+                            state.currentUser = res.user; state.requests = res.requests;
+                            if (res.allUsers) state.allUsers = res.allUsers; 
+                            safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
+                            renderCalendar();
+                            renderDashboard();
+                        } 
+                    });
+                } else {
+                    document.getElementById('auth-section').classList.remove('hidden');
+                    renderCalendar();
+                }
+            })();
+
+            document.getElementById('login-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('login-id').value;
+                const pw = document.getElementById('login-pw').value;
+                const res = await apiCall('login', { id, pw }, true); 
+                if (res && res.user) {
+                    safeStorage.set('leavepass_cache', JSON.stringify({ id, pw, user: res.user, requests: res.requests }), true);
+                    loginSuccess(res.user, res.requests, true);
+                }
+            };
+
+            document.getElementById('register-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const joinDateValue = document.getElementById('reg-join').value;
+                const initialTotalLeave = calculateInitialLeave(joinDateValue);
+                const res = await apiCall('register', {
+                    name: document.getElementById('reg-name').value,
+                    birth: document.getElementById('reg-birth').value,
+                    phone: document.getElementById('reg-phone').value,
+                    joinDate: joinDateValue,
+                    id: document.getElementById('reg-id').value,
+                    pw: document.getElementById('reg-pw').value,
+                    role: document.getElementById('reg-team').value,
+                    totalLeave: initialTotalLeave
+                }, true);
+                if (res) showSuccessModal(); 
+            };
+
+            document.getElementById('confirm-delete-btn').onclick = async () => {
+                if (!deleteTargetId) return;
+                const targetId = deleteTargetId;
+                closeConfirmModal();
+                const res = await apiCall('deleteRequest', { requestId: targetId }, true);
+                if (res) { 
+                    showAlert('성공적으로 삭제/취소되었습니다.', 'success'); 
+                    refreshData(true); 
+                }
+            };
+
+            document.getElementById('leave-request-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const requestDate = formatDate(new Date()); 
+                const leaveDate = document.getElementById('leave-date').value;
+                const reason = document.getElementById('leave-reason').value;
+                const handover = document.getElementById('leave-handover').value;
+                
+                if (!leaveDate) return showAlert('일정을 먼저 선택하세요.', 'error');
+                
+                let leaveType = document.getElementById('leave-type').value;
+                if (document.getElementById('detail-container').classList.contains('hidden') === false) {
+                    leaveType = document.getElementById('leave-detail').value;
+                }
+
+                if (!leaveType) {
+                    return showAlert('유효하지 않은 일정입니다. 다시 선택해주세요.', 'error');
+                }
+
+                if (state.currentUser.role === 'desk' || state.currentUser.role === 'user') {
+                    const teamRequests = state.requests.filter(r => 
+                        formatDate(r.leaveDate) === leaveDate && 
+                        r.userRole === state.currentUser.role && 
+                        r.status !== '반려'
+                    );
+                    
+                    if (teamRequests.length >= 1) {
+                        return showAlert('이미 누군가 선점했습니다. 다른 날짜를 선택해주세요.', 'error');
+                    }
+                }
+
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerText;
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
+                btn.disabled = true;
+
+                const res = await apiCall('requestLeave', {
+                    userId: state.currentUser.id, userName: state.currentUser.name,
+                    userRole: state.currentUser.role, requestDate, leaveDate, type: leaveType, reason, handover
+                }, true);
+                
+                if (res) { 
+                    showAlert('신청이 완료되었습니다.', 'success'); 
+                    document.getElementById('leave-request-form').reset(); 
+                    selectedDateStr = '';
+                    updateDropdownsForDate('');
+                    refreshData(true); 
+                } else {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            };
+        });
     </script>
 </body>
 </html>
