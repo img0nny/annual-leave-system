@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>서울더리본치과 연차 관리 시스템</title>
+    <title>스마트 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -264,8 +264,8 @@
                                 <input type="text" id="leave-reason" required class="input-field" placeholder="구체적인 사유 입력">
                             </div>
                             <div class="form-row">
-                                <label class="label-text">인수자</label>
-                                <input type="text" id="leave-handover" required class="input-field" placeholder="인수자">
+                                <label class="label-text">인수인계</label>
+                                <input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항">
                             </div>
                             <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3 text-sm sm:text-base">
                                 신청하기
@@ -287,7 +287,7 @@
                                 <thead class="hidden sm:table-header-group">
                                     <tr class="bg-slate-50/80">
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수자</th>
+                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
                                     </tr>
                                 </thead>
@@ -330,7 +330,7 @@
                                     <tr class="bg-slate-50/80">
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수자</th>
+                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
                                     </tr>
@@ -1102,12 +1102,12 @@
                                         <span class="text-xs text-slate-700 text-right break-all">${req.reason}</span>
                                     </div>
                                     <div class="flex justify-between items-start sm:hidden py-1.5">
-                                        <span class="text-[10px] text-slate-400 font-normal shrink-0 mr-2">인수자</span>
+                                        <span class="text-[10px] text-slate-400 font-normal shrink-0 mr-2">인수</span>
                                         <span class="text-xs text-slate-700 text-right break-all">${req.handover}</span>
                                     </div>
                                     <div class="hidden sm:block whitespace-normal break-keep">
                                         <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                        <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수자:</span> ${req.handover}</div>
+                                        <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
                                     </div>
                                 </td>
                                 
