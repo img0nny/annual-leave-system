@@ -187,7 +187,7 @@
 
         <!-- 메인 섹션 -->
         <div id="main-section" class="hidden">
-            <!-- 🚀 네비게이션: 로그아웃 버튼 터치 오류 완벽 해결 (배치 방식 수정) -->
+            <!-- 네비게이션: 로그아웃 버튼 터치 오류 완벽 해결 (배치 방식 수정) -->
             <nav class="flex flex-row justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white w-full relative z-50">
                 <div class="flex items-center gap-3 sm:gap-4">
                     <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-lg shrink-0">
@@ -198,8 +198,8 @@
                         <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter"></h2>
                     </div>
                 </div>
-                <!-- 로그아웃 버튼: 오버레이 방섭 없이 100% 클릭 가능하게 독립 배치 -->
-                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer pointer-events-auto" style="z-index: 100;">
+                <!-- 🚀 로그아웃 버튼: 오버레이 간섭 없이 100% 클릭 가능하게 독립 배치 -->
+                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer pointer-events-auto" style="z-index: 100;">
                     <i class="fas fa-sign-out-alt text-xl sm:text-2xl pointer-events-none"></i>
                 </button>
             </nav>
@@ -228,7 +228,6 @@
                 </div>
                 
                 <div id="calendar-grid" class="calendar-grid"></div>
-                <!-- 🚀 말풍선 영역 완전히 삭제됨 -->
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -283,16 +282,18 @@
                                 <i class="fas fa-sync-alt mr-1"></i> 새로고침
                             </button>
                         </div>
-                        
-                        <!-- 🚀 일반 직원용 목록: 가로 스크롤 없이 [일정] [유형] [사유] [인수] 가로 나열 적용 -->
-                        <div class="w-full flex flex-col">
-                            <div class="grid grid-cols-4 gap-2 w-full p-3 bg-slate-50/80 border-b border-slate-100 text-center">
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">일정</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">유형</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">사유</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">인수</div>
-                            </div>
-                            <div id="history-body" class="flex flex-col w-full bg-slate-50/30 sm:bg-white p-2 sm:p-0"></div>
+                        <!-- 🚀 가로 스크롤을 완전히 제거하고, 모바일 카드/PC 표 반응형 구현 -->
+                        <div class="w-full p-0 sm:p-2 bg-slate-50/30 sm:bg-transparent">
+                            <table class="w-full text-left sm:min-w-[450px]">
+                                <thead class="hidden sm:table-header-group border-b border-slate-100">
+                                    <tr class="bg-slate-50/80">
+                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
+                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
+                                        <th class="p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-body" class="flex flex-col gap-3 p-3 sm:p-0 sm:gap-0 sm:table-row-group"></tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -323,15 +324,20 @@
                             </div>
                         </div>
 
-                        <!-- 🚀 어드민 관리자용 목록: 가로 스크롤 없이 [일정] [유형] [사유] [인수] 가로 나열 적용 -->
-                        <div class="w-full flex flex-col">
-                            <div class="grid grid-cols-4 gap-2 w-full p-3 bg-slate-50/80 border-b border-slate-100 text-center">
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">일정</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">유형</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">사유</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400 uppercase">인수</div>
-                            </div>
-                            <div id="admin-queue-body" class="flex flex-col w-full bg-slate-50/30 sm:bg-white p-2 sm:p-0"></div>
+                        <!-- 🚀 가로 스크롤을 완전히 제거하고, 모바일 카드/PC 표 반응형 구현 -->
+                        <div class="w-full p-0 sm:p-2 bg-slate-50/30 sm:bg-transparent">
+                            <table class="w-full text-left sm:min-w-[700px]">
+                                <thead class="hidden sm:table-header-group border-b border-slate-100">
+                                    <tr class="bg-slate-50/80">
+                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
+                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
+                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
+                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
+                                        <th class="p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-queue-body" class="flex flex-col gap-3 p-3 sm:p-0 sm:gap-0 sm:table-row-group"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -364,6 +370,22 @@
             remove: function(key, isLocal = false) {
                 try { isLocal ? localStorage.removeItem(key) : sessionStorage.removeItem(key); } catch(e) {}
             }
+        };
+
+        // 🚀 로그아웃 기능: UI를 먼저 확실하게 초기화한 후 리로드 시도
+        window.logout = function() {
+            safeStorage.remove('leavepass_user');
+            safeStorage.remove('leavepass_cache', true);
+            state.currentUser = null;
+            state.requests = [];
+            document.getElementById('main-section').classList.add('hidden');
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+            document.getElementById('login-pw').value = '';
+            document.getElementById('login-id').value = '';
+            selectedDateStr = '';
+            
+            try { location.reload(); } catch(e) {}
         };
 
         function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
@@ -424,7 +446,7 @@
             const container = document.getElementById('alert-container');
             const div = document.createElement('div');
             const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
-            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 font-bold text-xs sm:text-sm mb-2 pointer-events-auto z-50`;
+            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 font-bold text-xs sm:text-sm mb-2 pointer-events-auto z-[999]`;
             div.innerHTML = `<span>${msg}</span>`;
             container.appendChild(div);
             setTimeout(() => {
@@ -433,6 +455,7 @@
             }, 3000);
         }
 
+        // 🚀 캘린더 렌더링: 말풍선 기능 제거, 깔끔한 뱃지로 원복
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -475,7 +498,6 @@
                 const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
                 const isPast = dateStr < todayStr;
                 
-                // 🚀 말풍선 제거 및 달력 칸을 깔끔한 형태로 원복
                 cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
                 
                 if (isClosedDay) {
@@ -756,7 +778,7 @@
                 hist.innerHTML = '';
                 let myRequests = state.requests.filter(r => r.userId === u.id);
                 if (myRequests.length === 0) {
-                    hist.innerHTML = '<div class="p-6 text-center text-slate-300 font-bold w-full">내역이 없습니다.</div>';
+                    hist.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>';
                 } else {
                     myRequests.forEach(req => {
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
@@ -765,26 +787,58 @@
                         
                         let cancelBtn = '';
                         if (req.status === '대기' || req.status === '1차 승인') {
-                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all">취소</button>`;
+                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all shadow-sm">취소</button>`;
                         }
 
-                        // 🚀 일반 사용자 목록: 4단 가로 배열 (모바일/PC 모두 완벽한 가로)
+                        // 🚀 일반직원 신청내역 (모바일: 카드형 레이아웃 적용, PC: 정통 표 레이아웃)
                         hist.innerHTML += `
-                            <div class="flex flex-col bg-white border border-slate-200 sm:border-x-0 sm:border-t-0 sm:border-b sm:border-slate-100 p-3 sm:p-4 rounded-xl sm:rounded-none mb-3 sm:mb-0 w-full hover:bg-slate-50 transition-all shadow-sm sm:shadow-none">
-                                <div class="flex justify-between items-center mb-2 sm:mb-3 pb-2 border-b border-slate-50">
-                                    <span class="text-[10px] sm:text-[11px] text-slate-400 font-bold">신청일: ${formatDate(req.requestDate)}</span>
-                                    <div class="flex items-center gap-2">
-                                        <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-black ${color}">${req.status}</span>
+                            <!-- 모바일 카드 뷰 -->
+                            <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
+                                <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="font-black text-slate-800 text-[15px]">${req.userName || state.currentUser.name}</span>
+                                        <span class="text-[10px] font-bold text-slate-400">${ROLE_MAP[req.userRole] || state.currentUser.role}</span>
+                                    </div>
+                                    <span class="px-2.5 py-1.5 rounded-md text-[10px] font-black ${color}">${req.status}</span>
+                                </td>
+                                <td class="flex justify-between items-start mb-2.5">
+                                    <div class="text-[11px] font-bold text-slate-400 pt-0.5">일정/유형</div>
+                                    <div class="text-right">
+                                        <div class="text-[13px] font-bold text-slate-800">${formatDate(req.leaveDate)}</div>
+                                        <div class="text-[11px] font-black text-blue-500 mt-0.5">${req.type}</div>
+                                    </div>
+                                </td>
+                                <td class="flex justify-between items-start ${cancelBtn ? 'mb-2' : ''}">
+                                    <div class="text-[11px] font-bold text-slate-400 pt-0.5 shrink-0 w-16">사유/인수</div>
+                                    <div class="text-right pl-2">
+                                        <div class="text-[12px] text-slate-700 font-medium break-all">${req.reason}</div>
+                                        <div class="text-[12px] text-slate-700 font-medium mt-0.5 break-all">${req.handover}</div>
+                                    </div>
+                                </td>
+                                ${cancelBtn ? `
+                                <td class="flex justify-end items-center gap-2 border-t border-slate-50 pt-2.5 mt-1 w-full">
+                                    ${cancelBtn}
+                                </td>` : '<td class="hidden"></td>'}
+                            </tr>
+
+                            <!-- PC 테이블 뷰 -->
+                            <tr class="hidden sm:table-row hover:bg-slate-50 transition-all font-medium border-b border-slate-100">
+                                <td class="p-4">
+                                    <div class="text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
+                                    <div class="text-xs font-black text-blue-500 mt-1">${req.type}</div>
+                                    <div class="text-[10px] text-slate-400 mt-1.5">신청: ${formatDate(req.requestDate)}</div>
+                                </td>
+                                <td class="p-4 whitespace-normal break-keep">
+                                    <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
+                                    <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                </td>
+                                <td class="p-4 text-right align-middle">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="px-3 py-1.5 rounded-full text-xs font-black ${color}">${req.status}</span>
                                         ${cancelBtn}
                                     </div>
-                                </div>
-                                <div class="grid grid-cols-4 gap-2 text-center items-center w-full">
-                                    <div class="text-[10px] sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[10px] sm:text-sm font-black text-blue-500">${req.type}</div>
-                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.reason}">${req.reason}</div>
-                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.handover}">${req.handover}</div>
-                                </div>
-                            </div>
+                                </td>
+                            </tr>
                         `;
                     });
                 }
@@ -852,83 +906,115 @@
                 }
 
                 if (filteredRequests.length === 0) {
-                    adminBody.innerHTML = '<div class="p-6 text-center text-slate-400 font-bold text-sm w-full">검색된 내역이 없거나 등록된 신청이 없습니다.</div>';
+                    adminBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400 font-bold text-sm w-full">검색된 내역이 없거나 등록된 신청이 없습니다.</td></tr>';
                 } else {
                     filteredRequests.forEach(req => {
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
                                       req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
                                       (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
                         
+                        // 관리 액션 버튼들
                         let actionBtns = '';
                         if (u.role === 'subadmin') {
                             if (req.status === '대기') {
                                 actionBtns = `
-                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-500 text-white rounded text-[11px] sm:text-xs font-bold">1차 승인</button>
-                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
+                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">1차 승인</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>
                                 `;
                             } else if (req.status === '1차 승인') {
                                 actionBtns = `
-                                    <button onclick="updateStatus('${req.id}', '대기')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-amber-400 text-white rounded text-[11px] sm:text-xs font-bold">대기 전환</button>
-                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
+                                    <button onclick="updateStatus('${req.id}', '대기')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-amber-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">대기 전환</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>
                                 `;
                             } else {
-                                actionBtns = `<button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>`;
+                                actionBtns = `<button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>`;
                             }
                         } else if (u.role === 'admin') {
                             if (req.status === '대기') {
                                 actionBtns = `
                                     <span class="px-2.5 py-1.5 sm:px-3 sm:py-2 text-slate-400 text-[11px] sm:text-xs font-bold">1차 대기중</span>
-                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>
                                 `;
                             } else if (req.status === '1차 승인') {
                                 actionBtns = `
-                                    <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-emerald-500 text-white rounded text-[11px] sm:text-xs font-bold">최종 승인</button>
-                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
+                                    <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-emerald-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">최종 승인</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>
                                 `;
                             } else if (req.status === '최종 승인') {
                                 actionBtns = `
-                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-400 text-white rounded text-[11px] sm:text-xs font-bold">1차 강등</button>
-                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
+                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">1차 강등</button>
+                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm">반려</button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>
                                 `;
                             } else if (req.status === '반려') {
                                 actionBtns = `
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
+                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold shadow-sm"><i class="fas fa-trash"></i></button>
                                 `;
                             }
                         }
 
-                        // 🚀 관리자 큐 목록: 4단 가로 배열 (모바일/PC 모두 완벽한 가로)
+                        // 🚀 어드민 큐 목록 (모바일: 카드형 레이아웃 적용, PC: 정통 표 레이아웃)
                         adminBody.innerHTML += `
-                            <div class="flex flex-col bg-white border border-slate-200 sm:border-x-0 sm:border-t-0 sm:border-b sm:border-slate-100 p-3 sm:p-4 rounded-xl sm:rounded-none mb-3 sm:mb-0 w-full hover:bg-slate-50 transition-all shadow-sm sm:shadow-none">
-                                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-50">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-black text-slate-800">${req.userName}</span>
-                                        <span class="text-[9px] sm:text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">${ROLE_MAP[req.userRole] || req.userRole}</span>
+                            <!-- 모바일 카드 뷰 -->
+                            <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
+                                <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="font-black text-slate-800 text-[15px]">${req.userName}</span>
+                                        <span class="text-[10px] font-bold text-slate-400">${ROLE_MAP[req.userRole] || req.userRole}</span>
                                     </div>
-                                    <span class="px-2.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-black ${color}">${req.status}</span>
-                                </div>
-                                <div class="grid grid-cols-4 gap-2 text-center items-center w-full">
-                                    <div class="text-[10px] sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[10px] sm:text-sm font-black text-blue-500">${req.type}</div>
-                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.reason}">${req.reason}</div>
-                                    <div class="text-[10px] sm:text-sm text-slate-700 truncate" title="${req.handover}">${req.handover}</div>
-                                </div>
-                                <div class="flex justify-end gap-1.5 mt-2 pt-2 border-t border-slate-50 w-full">
+                                    <span class="px-2.5 py-1.5 rounded-md text-[10px] font-black ${color}">${req.status}</span>
+                                </td>
+                                <td class="flex justify-between items-start mb-2.5">
+                                    <div class="text-[11px] font-bold text-slate-400 pt-0.5">일정/유형</div>
+                                    <div class="text-right">
+                                        <div class="text-[13px] font-bold text-slate-800">${formatDate(req.leaveDate)}</div>
+                                        <div class="text-[11px] font-black text-blue-500 mt-0.5">${req.type}</div>
+                                    </div>
+                                </td>
+                                <td class="flex justify-between items-start mb-2">
+                                    <div class="text-[11px] font-bold text-slate-400 pt-0.5 shrink-0 w-16">사유/인수</div>
+                                    <div class="text-right pl-2">
+                                        <div class="text-[12px] text-slate-700 font-medium break-all">${req.reason}</div>
+                                        <div class="text-[12px] text-slate-700 font-medium mt-0.5 break-all">${req.handover}</div>
+                                    </div>
+                                </td>
+                                <td class="flex justify-end items-center gap-2 border-t border-slate-50 pt-2.5 mt-1 w-full">
                                     ${actionBtns}
-                                </div>
-                            </div>
+                                </td>
+                            </tr>
+
+                            <!-- PC 테이블 뷰 -->
+                            <tr class="hidden sm:table-row hover:bg-slate-50 transition-all font-medium border-b border-slate-100">
+                                <td class="p-4">
+                                    <div class="font-black text-slate-800 text-sm">${req.userName}</div>
+                                    <div class="text-[10px] text-slate-400 font-bold mt-1">${ROLE_MAP[req.userRole] || req.userRole}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
+                                    <div class="text-xs font-black text-blue-500 mt-1">${req.type}</div>
+                                </td>
+                                <td class="p-4 whitespace-normal break-keep">
+                                    <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
+                                    <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                </td>
+                                <td class="p-4 align-middle">
+                                    <span class="px-3 py-1.5 rounded-md text-xs font-black ${color}">${req.status}</span>
+                                </td>
+                                <td class="p-4 text-right align-middle">
+                                    <div class="flex justify-end gap-1.5 flex-wrap">${actionBtns}</div>
+                                </td>
+                            </tr>
                         `;
                     });
                 }
             }
         }
 
-        // DOM 생성 완료 후 모든 스크립트 안전하게 초기화
+        // DOM 생성 완료 후 모든 스크립트 초기화
         document.addEventListener('DOMContentLoaded', () => {
             (function checkSessionAndInit() {
                 const savedDataStr = safeStorage.get('leavepass_user');
