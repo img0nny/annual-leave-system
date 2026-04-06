@@ -36,7 +36,7 @@
 
     <!-- 확인 모달 -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[9000] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shado+w-2xl">
+        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl">
             <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-check"></i></div>
             <h3 class="text-xl font-black text-slate-800 mb-2">요청을 처리할까요?</h3>
             <p class="text-sm text-slate-500 mb-8">내역이 즉시 반영됩니다.</p>
@@ -203,7 +203,6 @@
             remove: (key) => sessionStorage.removeItem(key)
         };
 
-        // 🚀 로그아웃: 확실한 초기화 로직
         window.logout = function() {
             safeStorage.remove('leavepass_user');
             state.currentUser = null;
@@ -228,17 +227,18 @@
             if (d > 0 && h > 0) t += `${d}일 ${h}시간`;
             else if (d > 0) t += `${d}일`;
             else if (h > 0) t += `${h}시간`;
-            else text += "0일";
+            else t += "0일";
             return t;
         };
 
-        const showAlert = (m, t = 'info') => {
-            const c = document.getElementById('alert-container'), d = document.createElement('div'), 
-                  cl = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
-            d.className = `${cl[t]} text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-xs sm:text-sm animate-in fade-in slide-in-from-top-4 mb-2 pointer-events-auto z-[9999]`;
-            d.innerHTML = `<span>${msg}</span>`;
+        const showAlert = (msg, t = 'info') => {
+            const container = document.getElementById('alert-container');
+            const div = document.createElement('div');
+            const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
+            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-xs sm:text-sm animate-in fade-in slide-in-from-top-4 mb-2 pointer-events-auto z-[9999]`;
+            div.innerHTML = `<span>${msg}</span>`;
             container.appendChild(div);
-            setTimeout(() => { d.classList.add('opacity-0'); setTimeout(() => d.remove(), 300); }, 3000);
+            setTimeout(() => { div.classList.add('opacity-0'); setTimeout(() => div.remove(), 300); }, 3000);
         };
 
         function renderCalendar() {
@@ -308,8 +308,16 @@
         function handleLeaveTypeChange() {
             const type = document.getElementById('leave-type').value, box = document.getElementById('detail-container'), sel = document.getElementById('leave-detail');
             sel.innerHTML = ''; box.classList.add('hidden');
-            if (type.includes('반차')) { sel.add(new Option(type + ' - 5시간 차감', type)); box.classList.remove('hidden'); }
-            else if (type.includes('잔여')) { ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); box.classList.remove('hidden'); }
+            
+            // 🚀 잔여 여부를 먼저 체크하여 '오후 반차 잔여'가 올바른 옵션을 타도록 순서 변경
+            if (type.includes('잔여')) { 
+                ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); 
+                box.classList.remove('hidden'); 
+            }
+            else if (type.includes('반차')) { 
+                sel.add(new Option(type + ' - 5시간 차감', type)); 
+                box.classList.remove('hidden'); 
+            }
         }
 
         async function apiCall(action, data = {}, loader = true) {
@@ -424,11 +432,21 @@
                                 tTotal = parseFloat(found.total) || 0; tUsed = parseFloat(found.used) || 0;
                                 filtered.forEach(r => { if (r.userId === tId && (r.status === '대기' || r.status === '1차 승인')) tUsed += getDeductionDaysLocally(r.type); });
                             }
+                        } else {
+                            filtered.forEach(r => {
+                                if (r.status === '최종 승인' || r.status === '1차 승인' || r.status === '대기') {
+                                    used += getDeductionDaysLocally(r.type);
+                                }
+                            });
                         }
+                        
+                        const remain = total - used;
+                        
                         document.getElementById('search-summary-name').innerText = tName;
                         document.getElementById('search-summary-total').innerText = tTotal + "일";
                         document.getElementById('search-summary-used').innerText = formatDaysHours(tUsed);
-                        document.getElementById('search-summary-remain').innerText = formatDaysHours(tTotal - tUsed);
+                        document.getElementById('search-summary-remain').innerText = formatDaysHours(remain);
+                        
                         summaryEl.classList.remove('hidden'); summaryEl.classList.add('flex');
                     } else { summaryEl.classList.add('hidden'); summaryEl.classList.remove('flex'); }
                 } else { summaryEl.classList.add('hidden'); summaryEl.classList.remove('flex'); }
@@ -505,9 +523,13 @@
         window.closeConfirmModal = function() { document.getElementById('confirm-modal').classList.add('hidden'); };
         document.getElementById('confirm-action-btn').onclick = () => { performDelete(deleteTargetId); closeConfirmModal(); };
 
+        // 🚀 순서를 바꾸어 '잔여'가 '반차'보다 먼저 체크되게 수정
         function getDeductionDaysLocally(type) {
             if (!type) return 0; const t = type.toLowerCase();
-            if (t.includes('무급')) return 0; if (t.includes('반차')) return 5 / 8; if (t.includes('잔여')) return 3 / 8; return 1; 
+            if (t.includes('무급')) return 0; 
+            if (t.includes('잔여')) return 3 / 8; // 잔여가 먼저 체크되도록
+            if (t.includes('반차')) return 5 / 8; 
+            return 1; 
         }
 
         document.addEventListener('DOMContentLoaded', () => {
