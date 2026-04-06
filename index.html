@@ -3,231 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>서울더리본치과 연차 관리 시스템</title>
+    <title>서울더리본치과 연차 관리</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        html, body { overflow-x: hidden; font-family: 'Inter', sans-serif; background-color: transparent; }
-        .glass-morphism { 
-            background: rgba(255, 255, 255, 0.95); 
-            backdrop-filter: blur(10px); 
-            border: 1px solid rgba(255, 255, 255, 0.2); 
-        }
-        
-        .form-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            margin-bottom: 12px;
-        }
-        .label-text {
-            width: 80px; 
-            font-size: 14px;
-            font-weight: 700;
-            color: #334155;
-            flex-shrink: 0;
-            text-align: left;
-        }
-        .input-field {
-            flex: 1;
-            width: 100%;
-            padding: 12px 16px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            outline: none;
-            transition: all 0.2s;
-            margin: 0;
-        }
-        .input-field:focus:not(:disabled) {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-            background-color: #ffffff;
-        }
-        input::placeholder { color: #cbd5e1; }
-        
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        .welcome-text {
-            font-size: 1.3rem; 
-            font-weight: 900;
-            line-height: 1.2;
-        }
-        @media (max-width: 640px) {
-            .welcome-text { font-size: 1.1rem; }
-            .label-text { width: 60px; font-size: 12px; }
-        }
-
-        /* 클릭 방지용 오버레이 제거 */
-        .no-select { user-select: none; }
+        html, body { overflow-x: hidden; font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .label-text { width: 80px; font-size: 14px; font-weight: 700; color: #334155; flex-shrink: 0; }
+        .input-field { flex: 1; padding: 12px 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; transition: all 0.2s; }
+        .input-field:focus:not(:disabled) { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); background-color: #ffffff; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+        .welcome-text { font-size: 1.3rem; font-weight: 900; line-height: 1.2; }
+        @media (max-width: 640px) { .welcome-text { font-size: 1.1rem; } .label-text { width: 60px; font-size: 12px; } }
     </style>
 </head>
-<body class="min-h-screen bg-[#f8fafc]">
+<body class="min-h-screen">
 
-    <!-- 전역 로딩 (치명적 작업 시에만 사용) -->
-    <div id="loading" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-300">
+    <div id="loading" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center hidden backdrop-blur-sm">
         <div class="flex flex-col items-center gap-4 bg-white/10 p-8 rounded-3xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
             <p class="text-white font-bold text-sm">연결 중...</p>
         </div>
     </div>
 
-    <!-- 로그인 실패 모달 -->
-    <div id="login-error-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl">
-            <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-exclamation"></i></div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">로그인 실패</h3>
-            <p class="text-sm text-slate-500 font-medium mb-8">아이디 또는 비밀번호가<br>일치하지 않습니다.</p>
-            <button onclick="closeLoginErrorModal()" class="w-full bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black transition-all">다시 입력하기</button>
-        </div>
-    </div>
+    <!-- 알림 컨테이너 -->
+    <div id="alert-container" class="fixed top-4 right-0 left-0 sm:left-auto sm:right-4 z-[9999] flex flex-col items-center sm:items-end px-4 space-y-2 pointer-events-none"></div>
 
-    <!-- 확인 모달 (삭제 등) -->
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden p-4">
+    <!-- 확인 모달 -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[9000] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl">
-            <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-trash-alt"></i></div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">정말 처리할까요?</h3>
-            <p class="text-xs text-slate-500 font-medium mb-8">해당 요청이 즉시 처리됩니다.</p>
+            <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-check"></i></div>
+            <h3 class="text-xl font-black text-slate-800 mb-2">요청을 처리할까요?</h3>
+            <p class="text-sm text-slate-500 mb-8">내역이 즉시 반영됩니다.</p>
             <div class="flex gap-3">
                 <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 rounded-2xl font-black">취소</button>
-                <button id="confirm-delete-btn" class="flex-1 bg-rose-500 text-white p-3.5 rounded-2xl font-black hover:bg-rose-600">확인</button>
+                <button id="confirm-action-btn" class="flex-1 bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black">확인</button>
             </div>
         </div>
     </div>
 
-    <div id="alert-container" class="fixed top-4 right-0 left-0 sm:left-auto sm:right-4 z-[9999] flex flex-col items-center sm:items-end px-4 space-y-2 pointer-events-none"></div>
-
     <div id="app" class="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8 h-full">
-        <!-- 인증 섹션 -->
+        <!-- 로그인 섹션 -->
         <div id="auth-section" class="max-w-md w-full mx-auto min-h-[60vh] flex flex-col justify-center hidden">
             <div class="glass-morphism p-6 sm:p-8 rounded-[2rem] shadow-2xl border border-white">
-                <div class="text-center mb-6">
+                <div class="text-center mb-8">
                     <h1 class="text-3xl font-black text-blue-600 tracking-tighter">서울더리본치과</h1>
                     <p class="text-xs text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
                 </div>
-                <form id="login-form" class="w-full" autocomplete="off">
-                    <div class="form-row"><label class="label-text">아이디</label><input type="text" id="login-id" required class="input-field" placeholder="아이디 입력" autocomplete="off"></div>
-                    <div class="form-row"><label class="label-text">비밀번호</label><input type="password" id="login-pw" required class="input-field" placeholder="••••••••" autocomplete="new-password"></div>
-                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg mt-2">로그인</button>
+                <form id="login-form" autocomplete="off" class="space-y-4">
+                    <div class="form-row"><label class="label-text">아이디</label><input type="text" id="login-id" required class="input-field" placeholder="아이디"></div>
+                    <div class="form-row"><label class="label-text">비밀번호</label><input type="password" id="login-pw" required class="input-field" placeholder="••••••••"></div>
+                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg">로그인</button>
                 </form>
             </div>
         </div>
 
-        <!-- 메인 섹션 -->
+        <!-- 메인 콘텐츠 섹션 -->
         <div id="main-section" class="hidden">
-            <nav class="flex flex-row justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white w-full relative z-50">
+            <nav class="flex justify-between items-center mb-6 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white">
                 <div class="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-lg shrink-0"><i class="fas fa-calendar-check text-lg"></i></div>
+                    <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shrink-0"><i class="fas fa-calendar-check text-lg"></i></div>
                     <div class="flex flex-col min-w-0">
-                        <span class="text-[10px] font-black text-blue-600 tracking-widest truncate uppercase">SEOUL THE RIBBON</span>
+                        <span class="text-[10px] font-black text-blue-600 tracking-widest uppercase truncate">SEOUL THE RIBBON</span>
                         <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter truncate"></h2>
                     </div>
                 </div>
-                <!-- 로그아웃 버튼 (독립 영역 보장) -->
-                <div class="flex items-center">
-                    <button type="button" id="logout-btn-trigger" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 sm:bg-transparent rounded-xl transition-all cursor-pointer relative z-[9999]">
-                        <i class="fas fa-sign-out-alt text-xl pointer-events-none"></i>
-                    </button>
-                </div>
+                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 sm:bg-transparent rounded-xl cursor-pointer relative z-[100]">
+                    <i class="fas fa-sign-out-alt text-xl"></i>
+                </button>
             </nav>
 
-            <!-- 캘린더 영역 -->
             <div id="calendar-section" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white p-4 sm:p-6 mb-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-base sm:text-xl font-black text-slate-800 flex items-center gap-2"><i class="far fa-calendar-alt text-blue-500"></i> 일정 확인 및 선택</h3>
                     <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                        <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600"><i class="fas fa-chevron-left text-xs"></i></button>
+                        <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600"><i class="fas fa-chevron-left text-xs"></i></button>
                         <span id="calendar-month-year" class="font-black text-slate-700 w-24 sm:w-32 text-center text-sm sm:text-base"></span>
-                        <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600"><i class="fas fa-chevron-right text-xs"></i></button>
+                        <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600"><i class="fas fa-chevron-right text-xs"></i></button>
                     </div>
                 </div>
                 <div class="calendar-grid mb-2">
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">일</div>
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">월</div>
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">화</div>
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">수</div>
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">목</div>
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">금</div>
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-blue-400 py-1">토</div>
+                    <div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">일</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">월</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">화</div><div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">수</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">목</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">금</div><div class="text-center font-bold text-[10px] sm:text-xs text-blue-400 py-1">토</div>
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
 
-                <!-- 캘린더 하단 요약 목록 (가로 한 줄 배열 최적화) -->
-                <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
-                    <h4 class="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                        <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
-                    </h4>
+                <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in fade-in">
+                    <h4 class="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3"><i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황</h4>
                     <div id="date-summary-list" class="flex flex-col"></div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="space-y-6">
-                    <!-- 잔여 연차 패널 -->
                     <div class="glass-morphism p-6 rounded-2xl shadow-sm border border-white border-l-8 border-l-blue-500">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
                         <div class="flex items-baseline gap-2 mt-2">
                             <h2 id="remaining-leave" class="text-3xl sm:text-5xl font-black text-slate-800 tracking-tighter">0일</h2>
-                            <span class="text-slate-400 font-bold text-sm shrink-0">/ <span id="total-leave">15</span>일</span>
+                            <span class="text-slate-400 font-bold text-sm">/ <span id="total-leave">0</span>일</span>
                         </div>
                     </div>
 
-                    <!-- 신청 폼 -->
                     <div id="user-request-card" class="glass-morphism p-5 rounded-2xl shadow-sm border border-white">
                         <h3 class="text-base font-black text-slate-800 mb-5 flex items-center gap-2"><i class="fas fa-paper-plane text-blue-500"></i> 연차 신청</h3>
-                        <form id="leave-request-form">
+                        <form id="leave-request-form" class="space-y-3">
                             <div class="form-row"><label class="label-text">연차 일정</label><input type="date" id="leave-date" required class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();"></div>
-                            <div class="form-row">
-                                <label class="label-text">연차 유형</label>
+                            <div class="form-row"><label class="label-text">연차 유형</label>
                                 <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold">
                                     <option value="" disabled selected>↑ 일정을 선택하세요</option>
                                 </select>
                             </div>
-                            <div id="detail-container" class="form-row hidden"><label class="label-text">상세 선택</label><select id="leave-detail" class="input-field cursor-pointer bg-blue-50/50 font-bold"></select></div>
-                            <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" required class="input-field" placeholder="구체적인 사유 입력"></div>
-                            <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항"></div>
-                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3">신청하기</button>
+                            <div id="detail-container" class="form-row hidden">
+                                <label class="label-text">상세 선택</label>
+                                <!-- 🚀 폰트 색상을 토요일 잔여와 동일한 파란색으로 수정 -->
+                                <select id="leave-detail" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold"></select>
+                            </div>
+                            <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" required class="input-field" placeholder="사유 입력"></div>
+                            <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 사항"></div>
+                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl">신청하기</button>
                         </form>
                     </div>
                 </div>
 
-                <!-- 내역 목록 (가로 배열 고정) -->
                 <div class="lg:col-span-2 space-y-6">
-                    <div id="user-history" class="glass-morphism rounded-2xl shadow-sm border border-white overflow-hidden">
+                    <div class="glass-morphism rounded-2xl shadow-sm border border-white overflow-hidden">
                         <div class="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
-                            <h3 class="text-base sm:text-lg font-black text-slate-800">연차 현황 및 내역</h3>
-                            <button onclick="refreshData(true)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all flex items-center">
-                                <i class="fas fa-sync-alt mr-1.5"></i> 데이터 갱신
-                            </button>
+                            <h3 class="text-base font-black text-slate-800">연차 현황 및 내역</h3>
+                            <button onclick="refreshData(true)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all"><i class="fas fa-sync-alt mr-1"></i> 데이터 갱신</button>
                         </div>
-
-                        <!-- 검색 요약 패널 (관리자 전용) -->
-                        <div id="admin-search-summary" class="hidden px-4 py-4 bg-blue-50/30 border-b border-blue-100 flex-col sm:flex-row justify-between items-center gap-3">
-                            <div class="text-sm font-black text-slate-800"><span id="search-summary-name" class="text-blue-600"></span> 님의 현황</div>
-                            <div class="flex gap-2 text-xs font-bold">
-                                <div class="bg-white px-3 py-2 rounded-lg border border-slate-100 text-center">총: <span id="search-summary-total">0</span></div>
-                                <div class="bg-white px-3 py-2 rounded-lg border border-slate-100 text-center">사용: <span id="search-summary-used" class="text-rose-500">0</span></div>
-                                <div class="bg-white px-3 py-2 rounded-lg border border-blue-200 ring-1 ring-blue-500 text-center">잔여: <span id="search-summary-remain" class="text-blue-600 font-black">0</span></div>
+                        <div id="admin-search-summary" class="hidden px-4 py-4 bg-blue-50/30 border-b border-blue-100 flex justify-between items-center gap-3">
+                            <div class="text-sm font-black"><span id="search-summary-name" class="text-blue-600 text-lg"></span> 님</div>
+                            <div class="flex gap-2 text-[10px] font-bold">
+                                <div class="bg-white p-2 rounded-lg border">총: <span id="search-summary-total">0</span></div>
+                                <div class="bg-white p-2 rounded-lg border text-rose-500">사용: <span id="search-summary-used">0</span></div>
+                                <div class="bg-white p-2 rounded-lg border border-blue-200 text-blue-600">잔여: <span id="search-summary-remain">0</span></div>
                             </div>
                         </div>
-
-                        <!-- 헤더 (가로 타이틀 고정) -->
                         <div class="w-full">
-                            <div class="grid grid-cols-4 gap-2 w-full p-4 bg-slate-50 text-center border-b border-slate-100">
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400">일정</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400">유형</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400">사유</div>
-                                <div class="text-[10px] sm:text-xs font-black text-slate-400">인수</div>
+                            <div class="grid grid-cols-4 gap-2 w-full p-4 bg-slate-50 text-center border-b text-[10px] sm:text-xs font-black text-slate-400">
+                                <div>일정</div><div>유형</div><div>사유</div><div>인수</div>
                             </div>
-                            <!-- 동적 목록이 렌더링될 곳 -->
                             <div id="list-render-body" class="flex flex-col w-full bg-white divide-y divide-slate-50"></div>
                         </div>
                     </div>
@@ -238,19 +154,16 @@
 
     <script>
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8MMIq0F6g/exec"; 
-
         let state = { currentUser: null, requests: [], allUsers: [] };
-        const ROLE_MAP = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
-        let currentDate = new Date();
-        let selectedDateStr = '';
+        let currentDate = new Date(), selectedDateStr = '', deleteTargetId = null;
 
         const safeStorage = {
-            get: (key) => { try { return sessionStorage.getItem(key); } catch(e) { return null; } },
-            set: (key, val) => { try { sessionStorage.setItem(key, val); } catch(e) {} },
-            remove: (key) => { try { sessionStorage.removeItem(key); } catch(e) {} }
+            get: (key) => sessionStorage.getItem(key),
+            set: (key, val) => sessionStorage.setItem(key, val),
+            remove: (key) => sessionStorage.removeItem(key)
         };
 
-        // 🚀 로그아웃: 100% 확실하게 UI 초기화 및 이동
+        // 🚀 로그아웃: 확실한 초기화 로직
         window.logout = function() {
             safeStorage.remove('leavepass_user');
             state.currentUser = null;
@@ -258,308 +171,200 @@
             document.getElementById('main-section').classList.add('hidden');
             document.getElementById('auth-section').classList.remove('hidden');
             document.getElementById('login-form').reset();
-            try { location.reload(); } catch(e) {}
+            location.href = location.href.split('#')[0];
         };
 
-        function formatDate(dateStr) {
-            if (!dateStr) return "-";
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        const formatDate = (s) => {
+            if (!s) return "-";
+            const d = new Date(s);
+            if (isNaN(d.getTime())) return s.includes('T') ? s.split('T')[0] : s;
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
+        };
 
-        function formatDaysHours(decimalDays) {
-            if (!decimalDays) return "0일";
-            const isNegative = decimalDays < 0;
-            const absDays = Math.abs(decimalDays);
-            const d = Math.floor(absDays);
-            const h = Math.round((absDays - d) * 8); 
-            let text = isNegative ? "-" : "";
-            if (d > 0 && h > 0) text += `${d}일 ${h}시간`;
-            else if (d > 0) text += `${d}일`;
-            else if (h > 0) text += `${h}시간`;
-            else text += "0일";
-            return text;
-        }
+        const formatDaysHours = (days) => {
+            if (!days) return "0일";
+            const d = Math.floor(Math.abs(days)), h = Math.round((Math.abs(days) - d) * 8);
+            let t = days < 0 ? "-" : "";
+            if (d > 0 && h > 0) t += `${d}일 ${h}시간`;
+            else if (d > 0) t += `${d}일`;
+            else if (h > 0) t += `${h}시간`;
+            else t += "0일";
+            return t;
+        };
 
-        function getDeductionDaysLocally(type) {
-            if (!type) return 0;
-            const t = type.toLowerCase();
-            if (t.includes('무급')) return 0;
-            if (t.includes('반차')) return 0.625; 
-            if (t.includes('잔여')) return 0.375; 
-            return 1; 
-        }
-
-        function showAlert(msg, type = 'info') {
-            const container = document.getElementById('alert-container');
-            const div = document.createElement('div');
-            const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
-            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 font-bold text-xs sm:text-sm mb-2 pointer-events-auto z-[999]`;
-            div.innerHTML = `<span>${msg}</span>`;
-            container.appendChild(div);
-            setTimeout(() => { div.classList.add('opacity-0'); setTimeout(() => div.remove(), 300); }, 3000);
-        }
+        const showAlert = (m, t = 'info') => {
+            const c = document.getElementById('alert-container'), d = document.createElement('div'), 
+                  cl = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
+            d.className = `${cl[t]} text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-xs sm:text-sm animate-in fade-in slide-in-from-top-4 mb-2 pointer-events-auto`;
+            d.innerText = m; c.appendChild(d);
+            setTimeout(() => { d.classList.add('opacity-0'); setTimeout(() => d.remove(), 300); }, 3000);
+        };
 
         function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
+            const year = currentDate.getFullYear(), month = currentDate.getMonth();
             document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            const grid = document.getElementById('calendar-grid');
+            const first = new Date(year, month, 1).getDay(), last = new Date(year, month + 1, 0).getDate(),
+                  grid = document.getElementById('calendar-grid'), today = formatDate(new Date());
             grid.innerHTML = '';
-            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
-            const todayStr = formatDate(new Date());
+            for (let i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
 
-            for (let i = 1; i <= lastDay; i++) {
-                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const dayOfWeek = new Date(year, month, i).getDay();
+            for (let i = 1; i <= last; i++) {
+                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
+                      dayOfWeek = new Date(year, month, i).getDay(), allDayReqs = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && r.status !== '반려');
                 
-                let teamApprovedCount = 0, teamPendingCount = 0;
-                const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && r.status !== '반려');
-
+                let approved = 0, pending = 0;
                 if (state.currentUser) {
-                    const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
-                    if (isAdmin) {
-                        teamApprovedCount = allDayRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
-                        teamPendingCount = allDayRequests.filter(r => r.status === '대기').length;
-                    } else {
-                        const teamRequests = allDayRequests.filter(r => r.userRole === state.currentUser.role);
-                        teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
-                        teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
-                    }
+                    const isAdmin = state.currentUser.role.includes('admin');
+                    const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => r.userRole === state.currentUser.role);
+                    approved = targetReqs.filter(r => r.status.includes('승인')).length;
+                    pending = targetReqs.filter(r => r.status === '대기').length;
                 }
-                
-                const isTeamClosed = teamApprovedCount >= 1; 
-                const isTeamPending = !isTeamClosed && (teamPendingCount >= 1); 
 
-                const cell = document.createElement('div');
-                const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
-                const isPast = dateStr < todayStr;
-                
-                cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm cursor-pointer `;
-                
-                if (isClosedDay) cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center min-h-[60px] sm:min-h-[75px] bg-slate-50 cursor-not-allowed opacity-60 `;
+                const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
+                cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] cursor-pointer bg-white hover:border-blue-300`;
+                if (isClosed) cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center min-h-[60px] sm:min-h-[75px] bg-slate-50 opacity-60 cursor-not-allowed`;
                 else if (isPast) cell.classList.add('bg-slate-50', 'text-slate-400');
-                
-                if (dateStr === selectedDateStr) {
-                    cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-200');
-                    cell.classList.remove('border-slate-100', 'bg-white', 'bg-slate-50');
-                }
+                if (dateStr === selectedDateStr) cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
 
-                const dateNum = document.createElement('span');
-                dateNum.className = `text-[12px] sm:text-sm font-bold ${dayOfWeek === 0 || dayOfWeek === 3 ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
-                dateNum.innerText = i;
-                cell.appendChild(dateNum);
+                cell.innerHTML = `<span class="text-[12px] sm:text-sm font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}">${i}</span>`;
+                const badge = document.createElement('span');
+                badge.className = `mt-1 text-[8px] sm:text-[10px] font-black px-1 py-0.5 rounded-md w-full text-center `;
+                if (isPast) badge.innerText = '마감', badge.className += 'bg-slate-100 text-slate-400';
+                else if (isClosed) badge.innerText = '휴무', badge.className += 'bg-rose-50 text-rose-500';
+                else if (approved >= 1) badge.innerText = '연차마감', badge.className += 'bg-red-50 text-red-600';
+                else if (pending >= 1) badge.innerText = '승인중', badge.className += 'bg-yellow-50 text-yellow-600';
+                else badge.innerText = '가능', badge.className += 'bg-emerald-50 text-emerald-500';
+                cell.appendChild(badge);
 
-                const statusBadge = document.createElement('span');
-                statusBadge.className = `mt-1 text-[8px] sm:text-[10px] font-black px-1 py-0.5 rounded-md w-full text-center `;
-                if (isPast) statusBadge.innerText = '마감', statusBadge.className += 'bg-slate-100 text-slate-400';
-                else if (isClosedDay) statusBadge.innerText = '휴무', statusBadge.className += 'bg-rose-50 text-rose-500';
-                else if (isTeamClosed) statusBadge.innerText = '연차마감', statusBadge.className += 'bg-red-50 text-red-600';
-                else if (isTeamPending) statusBadge.innerText = '승인중', statusBadge.className += 'bg-yellow-50 text-yellow-600';
-                else statusBadge.innerText = '가능', statusBadge.className += 'bg-emerald-50 text-emerald-500';
-                
-                cell.appendChild(statusBadge);
-
-                if (!isClosedDay) {
+                if (!isClosed) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
-                        if (!isPast) document.getElementById('leave-date').value = dateStr, updateDropdownsForDate(dateStr, isTeamClosed, isTeamPending);
+                        if (!isPast) document.getElementById('leave-date').value = dateStr, updateDropdownsForDate(dateStr, approved >= 1, pending >= 1);
                         else document.getElementById('leave-date').value = '', updateDropdownsForDate('');
-                        renderDateSummary(dateStr, allDayRequests);
-                        renderCalendar();
+                        renderDateSummary(dateStr, allDayReqs); renderCalendar();
                     };
                 }
                 grid.appendChild(cell);
             }
         }
 
-        function renderDateSummary(dateStr, dayRequests) {
-            const container = document.getElementById('date-summary-container');
-            const listEl = document.getElementById('date-summary-list');
-            document.getElementById('summary-date-text').innerText = dateStr;
-            listEl.innerHTML = '';
-            if (dayRequests.length === 0) { listEl.innerHTML = '<div class="text-[11px] text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center">신청된 내역이 없습니다.</div>'; }
-            else {
-                dayRequests.forEach(req => {
-                    const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
-                    listEl.innerHTML += `
-                        <div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                            <div class="flex items-center gap-2 flex-1 min-w-0">
-                                <div class="text-xs sm:text-sm font-black text-slate-800 shrink-0">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 px-1 rounded-md">${ROLE_MAP[req.userRole] || req.userRole}</span></div>
-                                <div class="text-[11px] sm:text-xs text-slate-500 truncate font-bold">${req.type}</div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span>
-                        </div>`;
-                });
-            }
-            container.classList.remove('hidden');
+        function renderDateSummary(date, reqs) {
+            const list = document.getElementById('date-summary-list'); document.getElementById('summary-date-text').innerText = date; list.innerHTML = '';
+            if (!reqs.length) list.innerHTML = '<div class="text-[11px] text-slate-400 font-bold p-3 text-center">신청 내역이 없습니다.</div>';
+            else reqs.forEach(req => {
+                const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
+                list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${ROLE_MAP[req.userRole] || req.userRole}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
+            });
+            document.getElementById('date-summary-container').classList.remove('hidden');
         }
 
-        function updateDropdownsForDate(dateStr, isTeamClosed = false, isTeamPending = false) {
-            const typeSelect = document.getElementById('leave-type');
-            const submitBtn = document.getElementById('submit-btn');
-            typeSelect.innerHTML = ''; 
-            typeSelect.disabled = false; typeSelect.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold';
-            submitBtn.disabled = false; submitBtn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3'; submitBtn.innerText = '신청하기';
-
-            if (!dateStr || isTeamClosed || isTeamPending) {
-                typeSelect.add(new Option(isTeamClosed || isTeamPending ? '신청 정원 마감' : '↑ 일정을 선택하세요', ''));
-                typeSelect.disabled = true; typeSelect.className = 'input-field bg-slate-100 text-slate-400 font-bold';
-                submitBtn.disabled = true; submitBtn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl font-black mt-3'; submitBtn.innerText = '신청 불가';
+        function updateDropdownsForDate(date, closed, pending) {
+            const select = document.getElementById('leave-type'), btn = document.getElementById('submit-btn');
+            select.innerHTML = ''; select.disabled = false; select.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold';
+            btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3'; btn.innerText = '신청하기';
+            if (!date || closed || pending) {
+                select.add(new Option(closed || pending ? '정원 마감' : '↑ 일정을 선택하세요', ''));
+                select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400';
+                btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3'; btn.innerText = '신청 불가';
                 return;
             }
-            const day = new Date(dateStr).getDay();
-            if (day === 6) { typeSelect.add(new Option('토요일 반차', '토요일 반차')); typeSelect.add(new Option('무급 휴가', '무급 휴가')); }
-            else { typeSelect.add(new Option('일반 연차', '일반 연차')); typeSelect.add(new Option('오후 반차', '오후 반차')); typeSelect.add(new Option('오후 반차 잔여', '오후 반차 잔여')); typeSelect.add(new Option('토요일 잔여', '토요일 잔여')); typeSelect.add(new Option('무급 휴가', '무급 휴가')); }
+            const day = new Date(date).getDay();
+            if (day === 6) { select.add(new Option('토요일 반차', '토요일 반차')); select.add(new Option('무급 휴가', '무급 휴가')); }
+            else { ['일반 연차', '오후 반차', '오후 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
             handleLeaveTypeChange();
         }
 
         function handleLeaveTypeChange() {
-            const type = document.getElementById('leave-type').value, container = document.getElementById('detail-container'), select = document.getElementById('leave-detail');
-            select.innerHTML = ''; container.classList.add('hidden');
-            if (type.includes('반차')) { select.add(new Option(type + ' - 5시간 차감', type)); container.classList.remove('hidden'); }
-            else if (type.includes('잔여')) { ['10시~13시', '16시~19시', '18시~21시'].forEach(v => select.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); container.classList.remove('hidden'); }
+            const type = document.getElementById('leave-type').value, box = document.getElementById('detail-container'), sel = document.getElementById('leave-detail');
+            sel.innerHTML = ''; box.classList.add('hidden');
+            if (type.includes('반차')) { sel.add(new Option(type + ' - 5시간 차감', type)); box.classList.remove('hidden'); }
+            else if (type.includes('잔여')) { ['10~13시', '16~19시', '18~21시'].forEach(v => sel.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); box.classList.remove('hidden'); }
         }
 
-        function toggleLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
-        function closeLoginErrorModal() { document.getElementById('login-error-modal').classList.add('hidden'); }
-        function openConfirmModal(id, action) { deleteTargetId = id; deleteTargetAction = action; document.getElementById('confirm-modal').classList.remove('hidden'); }
-        function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
-
-        async function apiCall(action, data = {}, showLoader = true) {
-            if (showLoader) toggleLoading(true);
+        async function apiCall(action, data = {}, loader = true) {
+            if (loader) document.getElementById('loading').classList.remove('hidden');
             try {
-                const response = await fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, ...data }) });
-                const result = await response.json();
-                if (result.status === 'error') throw new Error(result.message);
-                return result;
-            } catch (err) { showAlert(`오류: ${err.message}`, 'error'); return null; } finally { if (showLoader) toggleLoading(false); }
+                const res = await fetch(GAS_WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
+                const json = await res.json();
+                if (json.status === 'error') throw new Error(json.message);
+                return json;
+            } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
         }
 
-        // 🚀 성능 혁신 핵심: 낙관적 업데이트 로직 (UI 먼저 반영)
-        async function updateStatus(reqId, newStatus) {
-            const targetIdx = state.requests.findIndex(r => r.id == reqId);
-            if (targetIdx === -1) return;
-            const oldStatus = state.requests[targetIdx].status;
-            state.requests[targetIdx].status = newStatus; // 로컬 즉시 반영
-            renderDashboard(); 
-            const res = await apiCall('updateStatus', { requestId: reqId, status: newStatus }, false);
-            if (!res) { state.requests[targetIdx].status = oldStatus; renderDashboard(); } // 실패 시 롤백
-            else showAlert('결재 상태가 반영되었습니다.', 'success');
+        async function updateStatus(id, status) {
+            const idx = state.requests.findIndex(r => r.id == id); if (idx === -1) return;
+            const old = state.requests[idx].status; state.requests[idx].status = status; renderDashboard();
+            const res = await apiCall('updateStatus', { requestId: id, status }, false);
+            if (!res) { state.requests[idx].status = old; renderDashboard(); } else showAlert('반영 완료', 'success');
         }
 
-        async function performDelete(reqId) {
-            const original = [...state.requests];
-            state.requests = state.requests.filter(r => r.id != reqId); // 로컬 즉시 반영
-            renderDashboard(); 
-            const res = await apiCall('deleteRequest', { requestId: reqId }, false);
-            if (!res) { state.requests = original; renderDashboard(); } // 실패 시 롤백
-            else showAlert('취소/삭제 완료되었습니다.', 'success');
+        async function performDelete(id) {
+            const original = [...state.requests]; state.requests = state.requests.filter(r => r.id != id); renderDashboard();
+            const res = await apiCall('deleteRequest', { requestId: id }, false);
+            if (!res) { state.requests = original; renderDashboard(); } else showAlert('삭제 완료', 'success');
         }
 
         function renderDashboard() {
-            const u = state.currentUser; if(!u) return;
-            const isAdmin = u.role === 'admin' || u.role === 'subadmin';
-            const total = parseFloat(u.total) || 0;
+            const u = state.currentUser; if (!u) return;
+            const isAdmin = u.role.includes('admin');
             let used = parseFloat(u.used) || 0;
-            
-            // 🚀 실시간 차감 계산 (대기/1차승인 건 포함)
-            state.requests.forEach(r => { if (r.userId === u.id && (r.status === '대기' || r.status === '1차 승인')) used += getDeductionDaysLocally(r.type); });
-            document.getElementById('total-leave').innerText = total;
-            document.getElementById('remaining-leave').innerText = formatDaysHours(total - used);
-            
-            const renderBody = document.getElementById('list-render-body'); renderBody.innerHTML = '';
+            state.requests.forEach(r => { if (r.userId === u.id && r.status !== '최종 승인' && r.status !== '반려') used += getDeductionDaysLocally(r.type); });
+            document.getElementById('total-leave').innerText = u.total;
+            document.getElementById('remaining-leave').innerText = formatDaysHours(parseFloat(u.total) - used);
+
+            const body = document.getElementById('list-render-body'); body.innerHTML = '';
             const filtered = isAdmin ? state.requests : state.requests.filter(r => r.userId === u.id);
-            
-            if (filtered.length === 0) { renderBody.innerHTML = '<div class="p-8 text-center text-slate-300 font-bold">내역이 없습니다.</div>'; return; }
-            
+            if (!filtered.length) { body.innerHTML = '<div class="p-8 text-center text-slate-300 font-bold">내역이 없습니다.</div>'; return; }
+
             filtered.forEach(req => {
-                const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
-                let actions = '';
+                const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
+                let btns = '';
                 if (isAdmin) {
-                    if (u.role === 'subadmin') {
-                        if (req.status === '대기') actions = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] font-bold">1차 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">반려</button>`;
-                        else if (req.status === '1차 승인') actions = `<button onclick="updateStatus('${req.id}','대기')" class="bg-amber-400 text-white px-2 py-1 rounded text-[10px] font-bold">대기전환</button>`;
-                    } else if (u.role === 'admin') {
-                        if (req.status === '1차 승인') actions = `<button onclick="updateStatus('${req.id}','최종 승인')" class="bg-emerald-500 text-white px-2 py-1 rounded text-[10px] font-bold">최종 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">반려</button>`;
-                        else if (req.status === '최종 승인') actions = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-400 text-white px-2 py-1 rounded text-[10px] font-bold">1차 강등</button>`;
-                    }
-                    actions += `<button onclick="openConfirmModal('${req.id}', 'delete')" class="bg-slate-400 text-white px-2 py-1 rounded text-[10px] font-bold ml-1"><i class="fas fa-trash"></i></button>`;
-                } else if (req.status === '대기' || req.status === '1차 승인') {
-                    actions = `<button onclick="openConfirmModal('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-xs font-black">취소</button>`;
+                    if (u.role === 'subadmin' && req.status === '대기') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px]">1차 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1 rounded text-[10px]">반려</button>`;
+                    else if (u.role === 'admin' && req.status === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','최종 승인')" class="bg-emerald-500 text-white px-2 py-1 rounded text-[10px]">최종 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1 rounded text-[10px]">반려</button>`;
+                    btns += `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-400 text-white px-2 py-1 rounded text-[10px] ml-1"><i class="fas fa-trash"></i></button>`;
+                } else if (!req.status.includes('승인') || req.status === '대기') {
+                    btns = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black">취소</button>`;
                 }
 
-                renderBody.innerHTML += `
-                    <div class="flex flex-col p-4 w-full group hover:bg-slate-50/50 transition-all">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-2">
-                                <span class="font-black text-slate-800 text-[15px]">${req.userName}</span>
-                                <span class="text-[9px] font-bold text-slate-400 border border-slate-100 px-1 rounded">${ROLE_MAP[req.userRole] || req.userRole}</span>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span>
-                        </div>
-                        <div class="grid grid-cols-4 gap-2 text-center items-center">
-                            <div class="text-[11px] sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
-                            <div class="text-[10px] sm:text-sm font-black text-blue-500">${req.type}</div>
-                            <div class="text-[10px] sm:text-sm text-slate-500 truncate" title="${req.reason}">${req.reason}</div>
-                            <div class="text-[10px] sm:text-sm text-slate-500 truncate" title="${req.handover}">${req.handover}</div>
-                        </div>
-                        <div class="flex justify-end gap-1.5 mt-3 empty:hidden">${actions}</div>
-                    </div>`;
+                body.innerHTML += `<div class="flex flex-col p-4 w-full bg-white hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-0"><div class="flex justify-between items-center mb-3"><div class="flex items-center gap-2"><span class="font-black text-slate-800 text-[15px]">${req.userName}</span><span class="text-[9px] font-bold text-slate-400 border px-1 rounded">${ROLE_MAP[req.userRole] || req.userRole}</span></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span></div><div class="grid grid-cols-4 gap-2 text-center items-center text-[11px]"><div class="font-bold text-slate-700">${formatDate(req.leaveDate)}</div><div class="font-black text-blue-500">${req.type}</div><div class="text-slate-500 truncate" title="${req.reason}">${req.reason}</div><div class="text-slate-500 truncate" title="${req.handover}">${req.handover}</div></div><div class="flex justify-end gap-1.5 mt-3">${btns}</div></div>`;
             });
             renderCalendar();
         }
 
+        window.openConfirmAction = function(id, action) { deleteTargetId = id; document.getElementById('confirm-modal').classList.remove('hidden'); };
+        window.closeConfirmModal = function() { document.getElementById('confirm-modal').classList.add('hidden'); };
+        document.getElementById('confirm-action-btn').onclick = () => { performDelete(deleteTargetId); closeConfirmModal(); };
+
         document.addEventListener('DOMContentLoaded', () => {
             const saved = safeStorage.get('leavepass_user');
-            if (saved) { 
-                const data = JSON.parse(saved); state.currentUser = data.user; state.requests = data.requests || [];
+            if (saved) {
+                const d = JSON.parse(saved); state.currentUser = d.user; state.requests = d.requests || [];
                 document.getElementById('auth-section').classList.add('hidden'); document.getElementById('main-section').classList.remove('hidden');
-                document.getElementById('welcome-msg').innerText = `안녕하세요 ${state.currentUser.role.includes('admin') ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
-                renderDashboard(); refreshData(false); 
-            } else { document.getElementById('auth-section').classList.remove('hidden'); renderCalendar(); }
+                document.getElementById('welcome-msg').innerText = `안녕하세요 ${isAdminUser() ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
+                renderDashboard(); refreshData(false);
+            } else document.getElementById('auth-section').classList.remove('hidden'), renderCalendar();
 
             document.getElementById('login-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const res = await apiCall('login', { id: document.getElementById('login-id').value, pw: document.getElementById('login-pw').value });
-                if (res && res.user) { 
-                    state.currentUser = res.user; state.requests = res.requests; if (res.allUsers) state.allUsers = res.allUsers;
-                    safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests}));
-                    location.reload(); 
-                } else { document.getElementById('login-pw').value = ''; }
+                if (res) { state.currentUser = res.user; state.requests = res.requests; safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); location.reload(); }
             };
 
             document.getElementById('leave-request-form').onsubmit = async (e) => {
-                e.preventDefault();
-                const date = document.getElementById('leave-date').value;
-                let type = document.getElementById('leave-type').value;
+                e.preventDefault(); const date = document.getElementById('leave-date').value; let type = document.getElementById('leave-type').value;
                 if (!document.getElementById('detail-container').classList.contains('hidden')) type = document.getElementById('leave-detail').value;
-                
-                const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.innerText = "처리 중...";
                 const res = await apiCall('requestLeave', { userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role, requestDate: formatDate(new Date()), leaveDate: date, type, reason: document.getElementById('leave-reason').value, handover: document.getElementById('leave-handover').value });
-                if (res) { showAlert('신청이 접수되었습니다.', 'success'); document.getElementById('leave-request-form').reset(); selectedDateStr = ''; refreshData(true); }
-                else { btn.disabled = false; btn.innerText = "신청하기"; }
+                if (res) { showAlert('신청되었습니다.', 'success'); document.getElementById('leave-request-form').reset(); refreshData(true); }
             };
-
-            document.getElementById('confirm-delete-btn').onclick = () => {
-                const id = deleteTargetId; closeConfirmModal();
-                if (deleteTargetAction === 'delete') performDelete(id);
-            };
-
-            // 로그아웃 버튼 이벤트 리스너 (터치/클릭 모두 대응)
-            document.getElementById('logout-btn-trigger').addEventListener('click', (e) => {
-                e.preventDefault(); e.stopPropagation(); logout();
-            });
         });
 
-        async function refreshData(showLoader = true) {
+        async function refreshData(loader = true) {
             if (!state.currentUser) return;
-            const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, showLoader);
-            if (res) { state.currentUser = res.user; state.requests = res.requests; if (res.allUsers) state.allUsers = res.allUsers; renderDashboard(); }
+            const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
+            if (res) { state.currentUser = res.user; state.requests = res.requests; renderDashboard(); }
         }
+        const isAdminUser = () => state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
         function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
     </script>
 </body>
