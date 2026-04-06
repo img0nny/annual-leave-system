@@ -301,7 +301,7 @@
             }
             const day = new Date(date).getDay();
             if (day === 6) { select.add(new Option('토요일 반차', '토요일 반차')); select.add(new Option('무급 휴가', '무급 휴가')); }
-            else { ['일반 연차', '오후 반차', '오후 반차 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
+            else { ['일반 연차', '오후 반차', '오후 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
             handleLeaveTypeChange();
         }
 
