@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>서울더리본치과 연차 관리 시스템</title>
+    <title>스마트 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -67,6 +67,10 @@
                 font-size: 1.1rem; 
             }
         }
+        
+        /* 스크롤바 숨기기 (모바일 최적화용) */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen bg-[#f8fafc]">
@@ -228,6 +232,19 @@
                 </div>
                 
                 <div id="calendar-grid" class="calendar-grid"></div>
+
+                <!-- 🚀 캘린더 날짜 클릭 시 나타나는 말풍선(신청 현황 요약창) -->
+                <div id="date-summary-container" class="hidden relative mt-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-lg animate-in fade-in slide-in-from-top-2">
+                    <!-- 말풍선 꼭지 (화살표) -->
+                    <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-t border-l border-slate-200 rotate-45"></div>
+                    
+                    <div class="relative z-10">
+                        <h4 class="text-xs sm:text-sm font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                            <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
+                        </h4>
+                        <div id="date-summary-list" class="flex flex-col gap-2"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -437,6 +454,7 @@
             }, 3000);
         }
 
+        // 🚀 캘린더 렌더링 로직 (셀 내부에 텍스트 넣지 않고, 클릭 시 하단 말풍선 표시)
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -454,17 +472,17 @@
                 
                 let teamApprovedCount = 0;
                 let teamPendingCount = 0;
-                let dayRequests = [];
+                let allDayRequests = []; // 모든 팀의 해당 일자 신청 내역
 
                 if (state.currentUser) {
                     const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
                     
-                    dayRequests = state.requests.filter(r => 
+                    allDayRequests = state.requests.filter(r => 
                         formatDate(r.leaveDate) === dateStr && r.status !== '반려'
                     );
 
                     if (!isAdmin) {
-                        const teamRequests = dayRequests.filter(r => r.userRole === state.currentUser.role);
+                        const teamRequests = allDayRequests.filter(r => r.userRole === state.currentUser.role);
                         teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
                         teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
                     } else {
@@ -480,10 +498,11 @@
                 const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
                 const isPast = dateStr < todayStr;
                 
-                cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col justify-start transition-all min-h-[80px] sm:min-h-[100px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
+                // 🚀 모바일에서도 깔끔하게 보이도록 크기 조절
+                cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[70px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
                 
                 if (isClosedDay) {
-                    cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col justify-start transition-all min-h-[80px] sm:min-h-[100px] relative overflow-hidden bg-slate-50 cursor-not-allowed opacity-60 `;
+                    cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[70px] relative overflow-hidden bg-slate-50 cursor-not-allowed opacity-60 `;
                 } else if (isPast) {
                     cell.classList.add('bg-slate-50', 'text-slate-400', 'cursor-pointer');
                 } else {
@@ -495,16 +514,13 @@
                     cell.classList.remove('border-slate-100', 'bg-white', 'bg-slate-50');
                 }
 
-                const topRow = document.createElement('div');
-                topRow.className = 'w-full flex justify-between items-start mb-1';
-
                 const dateNum = document.createElement('span');
-                dateNum.className = `text-[11px] sm:text-[13px] font-bold ${dayOfWeek === 0 || dayOfWeek === 3 ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
+                dateNum.className = `text-[12px] sm:text-sm font-bold ${dayOfWeek === 0 || dayOfWeek === 3 ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
                 dateNum.innerText = i;
-                topRow.appendChild(dateNum);
+                cell.appendChild(dateNum);
 
                 const statusBadge = document.createElement('span');
-                statusBadge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md truncate max-w-[60%] text-center `;
+                statusBadge.className = `mt-1.5 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md w-full text-center `;
                 
                 if (isPast) {
                     statusBadge.className += 'bg-slate-100 text-slate-400';
@@ -522,44 +538,75 @@
                     statusBadge.className += 'bg-emerald-50 text-emerald-500';
                     statusBadge.innerText = '가능';
                 }
-                topRow.appendChild(statusBadge);
-                cell.appendChild(topRow);
+                cell.appendChild(statusBadge);
 
-                const reqList = document.createElement('div');
-                reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
-                
-                dayRequests.forEach(req => {
-                    const reqItem = document.createElement('div');
-                    const colorClass = (req.status === '최종 승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
-                    
-                    let shortType = req.type;
-                    if(shortType.includes('일반 연차')) shortType = '연차';
-                    else if(shortType.includes('무급 휴가')) shortType = '무급';
-                    else if(shortType.includes('반차')) shortType = '반차';
-                    else if(shortType.includes('잔여')) shortType = '잔여';
-
-                    reqItem.className = `text-[9px] sm:text-[10px] px-1 py-0.5 rounded truncate w-full font-bold text-left ${colorClass}`;
-                    reqItem.innerText = `${req.userName}(${shortType})`;
-                    reqList.appendChild(reqItem);
-                });
-                
-                cell.appendChild(reqList);
-
+                // 🚀 휴무일 제외 모든 날짜 클릭 시 말풍선 표시
                 if (!isClosedDay) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
                         if (!isPast) {
                             document.getElementById('leave-date').value = dateStr;
-                            updateDropdownsForDate(dateStr);
+                            updateDropdownsForDate(dateStr, isTeamClosed, isTeamPending);
                         } else {
                             document.getElementById('leave-date').value = '';
                             updateDropdownsForDate(''); 
                         }
+                        renderDateSummary(dateStr, allDayRequests); // 말풍선 렌더링 호출
                         renderCalendar(); 
                     };
                 }
                 grid.appendChild(cell);
             }
+            
+            // 캘린더 갱신 시 기존에 띄워둔 요약창 유지
+            if (selectedDateStr) {
+                const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && r.status !== '반려');
+                renderDateSummary(selectedDateStr, allDayRequests);
+            }
+        }
+
+        // 🚀 말풍선(신청 현황)을 렌더링하는 함수
+        function renderDateSummary(dateStr, dayRequests) {
+            const container = document.getElementById('date-summary-container');
+            const listEl = document.getElementById('date-summary-list');
+            const dateText = document.getElementById('summary-date-text');
+
+            if (!dateStr) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            dateText.innerText = dateStr;
+            listEl.innerHTML = '';
+
+            if (!dayRequests) {
+                dayRequests = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && r.status !== '반려');
+            }
+
+            if (dayRequests.length === 0) {
+                listEl.innerHTML = '<div class="text-[11px] sm:text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-xl text-center border border-slate-100">이 날짜에 신청된 연차가 없습니다.</div>';
+            } else {
+                dayRequests.forEach(req => {
+                    const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
+                                  req.status === '1차 승인' ? 'bg-blue-100 text-blue-600' :
+                                  'bg-yellow-100 text-yellow-600';
+                    const roleName = ROLE_MAP[req.userRole] || req.userRole;
+
+                    listEl.innerHTML += `
+                        <div class="flex justify-between items-center bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                <div class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                    ${req.userName} 
+                                    <span class="text-[9px] sm:text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-md">${roleName}</span>
+                                </div>
+                                <div class="text-[11px] sm:text-xs font-bold text-slate-500">${req.type}</div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-black ${color} shrink-0">${req.status}</span>
+                        </div>
+                    `;
+                });
+            }
+            container.classList.remove('hidden');
         }
 
         function changeMonth(delta) {
@@ -567,7 +614,7 @@
             renderCalendar();
         }
 
-        function updateDropdownsForDate(dateStr) {
+        function updateDropdownsForDate(dateStr, isTeamClosed = false, isTeamPending = false) {
             const typeSelect = document.getElementById('leave-type');
             const detailContainer = document.getElementById('detail-container');
             const submitBtn = document.getElementById('submit-btn');
@@ -596,6 +643,7 @@
                 return;
             }
 
+            // 🚀 정원 마감 시 폼만 조용히 차단 (경고창 없음)
             let currentTeamClosed = false;
             let currentTeamPending = false;
 
@@ -1134,9 +1182,13 @@
                     document.getElementById('leave-request-form').reset(); 
                     selectedDateStr = '';
                     updateDropdownsForDate('');
+                    
+                    // 🚀 신청 제출 후 말풍선 닫기
+                    const container = document.getElementById('date-summary-container');
+                    if(container) container.classList.add('hidden');
+                    
                     refreshData(true); 
                 } else {
-                    // 에러 발생 시 버튼 원복
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
