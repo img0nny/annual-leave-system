@@ -201,9 +201,10 @@
                         <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter"></h2>
                     </div>
                 </div>
-                <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 border-t sm:border-t-0 pt-4 sm:pt-0 border-slate-100">
-                    <button onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl sm:rounded-2xl transition-all shrink-0 ml-auto">
-                        <i class="fas fa-sign-out-alt text-xl sm:text-2xl"></i>
+                <!-- 🚀 로그아웃 버튼 터치 오류 해결 (z-index 및 relative 적용) -->
+                <div class="flex items-center justify-end w-full sm:w-auto gap-4 border-t sm:border-t-0 pt-4 sm:pt-0 border-slate-100">
+                    <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer relative z-50">
+                        <i class="fas fa-sign-out-alt text-xl sm:text-2xl pointer-events-none"></i>
                     </button>
                 </div>
             </nav>
@@ -235,9 +236,7 @@
 
                 <!-- 🚀 캘린더 날짜 클릭 시 나타나는 말풍선(신청 현황 요약창) -->
                 <div id="date-summary-container" class="hidden relative mt-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-lg animate-in fade-in slide-in-from-top-2">
-                    <!-- 말풍선 꼭지 (화살표) -->
                     <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-t border-l border-slate-200 rotate-45"></div>
-                    
                     <div class="relative z-10">
                         <h4 class="text-xs sm:text-sm font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2">
                             <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
@@ -454,7 +453,7 @@
             }, 3000);
         }
 
-        // 🚀 캘린더 렌더링 로직 (셀 내부에 텍스트 넣지 않고, 클릭 시 하단 말풍선 표시)
+        // 🚀 캘린더 렌더링 로직 (셀을 깔끔하게 유지하고 클릭 시 말풍선 표시)
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -472,7 +471,7 @@
                 
                 let teamApprovedCount = 0;
                 let teamPendingCount = 0;
-                let allDayRequests = []; // 모든 팀의 해당 일자 신청 내역
+                let allDayRequests = []; 
 
                 if (state.currentUser) {
                     const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
@@ -498,11 +497,10 @@
                 const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 3); 
                 const isPast = dateStr < todayStr;
                 
-                // 🚀 모바일에서도 깔끔하게 보이도록 크기 조절
-                cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[70px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
+                cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] relative overflow-hidden bg-white hover:border-blue-300 hover:shadow-sm `;
                 
                 if (isClosedDay) {
-                    cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[70px] relative overflow-hidden bg-slate-50 cursor-not-allowed opacity-60 `;
+                    cell.className = `p-1.5 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] relative overflow-hidden bg-slate-50 cursor-not-allowed opacity-60 `;
                 } else if (isPast) {
                     cell.classList.add('bg-slate-50', 'text-slate-400', 'cursor-pointer');
                 } else {
@@ -540,7 +538,7 @@
                 }
                 cell.appendChild(statusBadge);
 
-                // 🚀 휴무일 제외 모든 날짜 클릭 시 말풍선 표시
+                // 🚀 휴무일 제외 클릭 허용, 폼 차단은 updateDropdownsForDate에서 처리
                 if (!isClosedDay) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
@@ -551,21 +549,23 @@
                             document.getElementById('leave-date').value = '';
                             updateDropdownsForDate(''); 
                         }
-                        renderDateSummary(dateStr, allDayRequests); // 말풍선 렌더링 호출
+                        renderDateSummary(dateStr, allDayRequests); 
                         renderCalendar(); 
                     };
                 }
                 grid.appendChild(cell);
             }
             
-            // 캘린더 갱신 시 기존에 띄워둔 요약창 유지
+            // 캘린더 갱신 시 요약창 유지
             if (selectedDateStr) {
                 const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && r.status !== '반려');
                 renderDateSummary(selectedDateStr, allDayRequests);
+            } else {
+                document.getElementById('date-summary-container').classList.add('hidden');
             }
         }
 
-        // 🚀 말풍선(신청 현황)을 렌더링하는 함수
+        // 🚀 클릭 시 모바일/PC 모두 완벽한 가로 말풍선 디자인 렌더링
         function renderDateSummary(dateStr, dayRequests) {
             const container = document.getElementById('date-summary-container');
             const listEl = document.getElementById('date-summary-list');
@@ -592,16 +592,17 @@
                                   'bg-yellow-100 text-yellow-600';
                     const roleName = ROLE_MAP[req.userRole] || req.userRole;
 
+                    // 🚀 모바일에서도 텍스트가 가로로 온전히 보이도록 (flex-row 강제)
                     listEl.innerHTML += `
                         <div class="flex justify-between items-center bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                                <div class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5">
+                            <div class="flex flex-row items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                                <div class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5 shrink-0">
                                     ${req.userName} 
                                     <span class="text-[9px] sm:text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-md">${roleName}</span>
                                 </div>
-                                <div class="text-[11px] sm:text-xs font-bold text-slate-500">${req.type}</div>
+                                <div class="text-[11px] sm:text-xs font-bold text-slate-500 truncate">${req.type}</div>
                             </div>
-                            <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-black ${color} shrink-0">${req.status}</span>
+                            <span class="px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-black ${color} shrink-0 ml-2">${req.status}</span>
                         </div>
                     `;
                 });
@@ -614,6 +615,7 @@
             renderCalendar();
         }
 
+        // 🚀 입력 폼 방어 로직
         function updateDropdownsForDate(dateStr, isTeamClosed = false, isTeamPending = false) {
             const typeSelect = document.getElementById('leave-type');
             const detailContainer = document.getElementById('detail-container');
@@ -643,24 +645,7 @@
                 return;
             }
 
-            // 🚀 정원 마감 시 폼만 조용히 차단 (경고창 없음)
-            let currentTeamClosed = false;
-            let currentTeamPending = false;
-
-            if (state.currentUser && (state.currentUser.role === 'desk' || state.currentUser.role === 'user')) {
-                const teamRequests = state.requests.filter(r => 
-                    formatDate(r.leaveDate) === dateStr && 
-                    r.userRole === state.currentUser.role && 
-                    r.status !== '반려'
-                );
-                const approved = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
-                const pending = teamRequests.filter(r => r.status === '대기').length;
-                
-                currentTeamClosed = approved >= 1; 
-                currentTeamPending = !currentTeamClosed && (pending >= 1);
-            }
-
-            if (currentTeamClosed || currentTeamPending) {
+            if (isTeamClosed || isTeamPending) {
                 typeSelect.add(new Option('신청 정원 마감', ''));
                 typeSelect.disabled = true;
                 typeSelect.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed';
@@ -1183,7 +1168,6 @@
                     selectedDateStr = '';
                     updateDropdownsForDate('');
                     
-                    // 🚀 신청 제출 후 말풍선 닫기
                     const container = document.getElementById('date-summary-container');
                     if(container) container.classList.add('hidden');
                     
