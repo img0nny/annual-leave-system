@@ -110,14 +110,14 @@
                         <form id="leave-request-form" class="space-y-3">
                             <div class="form-row"><label class="label-text">연차 일정</label><input type="date" id="leave-date" required class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();"></div>
                             <div class="form-row"><label class="label-text">연차 유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold">
+                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50 text-blue-700 font-bold" style="color: #1d4ed8;">
                                     <option value="" disabled selected>↑ 일정을 선택하세요</option>
                                 </select>
                             </div>
-                            <div id="detail-container" class="form-row hidden">
+                            <div id="detail-container" class="form-row hidden animate-in slide-in-from-top-2">
                                 <label class="label-text">상세 선택</label>
-                                <!-- 🚀 폰트 색상을 토요일 잔여와 동일한 파란색으로 수정 -->
-                                <select id="leave-detail" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold"></select>
+                                <!-- 🚀 폰트 색상을 토요일 잔여와 동일한 파란색으로 확정 반영 -->
+                                <select id="leave-detail" class="input-field cursor-pointer bg-blue-50 text-blue-700 font-bold" style="color: #1d4ed8;"></select>
                             </div>
                             <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" required class="input-field" placeholder="사유 입력"></div>
                             <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 사항"></div>
@@ -163,7 +163,6 @@
             remove: (key) => sessionStorage.removeItem(key)
         };
 
-        // 🚀 로그아웃: 확실한 초기화 로직
         window.logout = function() {
             safeStorage.remove('leavepass_user');
             state.currentUser = null;
@@ -253,18 +252,19 @@
             if (!reqs.length) list.innerHTML = '<div class="text-[11px] text-slate-400 font-bold p-3 text-center">신청 내역이 없습니다.</div>';
             else reqs.forEach(req => {
                 const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
-                list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${ROLE_MAP[req.userRole] || req.userRole}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
+                const roleName = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' }[req.userRole] || req.userRole;
+                list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${roleName}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
             });
             document.getElementById('date-summary-container').classList.remove('hidden');
         }
 
         function updateDropdownsForDate(date, closed, pending) {
             const select = document.getElementById('leave-type'), btn = document.getElementById('submit-btn');
-            select.innerHTML = ''; select.disabled = false; select.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold';
+            select.innerHTML = ''; select.disabled = false; select.className = 'input-field cursor-pointer bg-blue-50 text-blue-700 font-bold'; select.style.color = '#1d4ed8';
             btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3'; btn.innerText = '신청하기';
             if (!date || closed || pending) {
                 select.add(new Option(closed || pending ? '정원 마감' : '↑ 일정을 선택하세요', ''));
-                select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400';
+                select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed'; select.style.color = '';
                 btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3'; btn.innerText = '신청 불가';
                 return;
             }
@@ -278,7 +278,7 @@
             const type = document.getElementById('leave-type').value, box = document.getElementById('detail-container'), sel = document.getElementById('leave-detail');
             sel.innerHTML = ''; box.classList.add('hidden');
             if (type.includes('반차')) { sel.add(new Option(type + ' - 5시간 차감', type)); box.classList.remove('hidden'); }
-            else if (type.includes('잔여')) { ['10~13시', '16~19시', '18~21시'].forEach(v => sel.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); box.classList.remove('hidden'); }
+            else if (type.includes('잔여')) { ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); box.classList.remove('hidden'); }
         }
 
         async function apiCall(action, data = {}, loader = true) {
@@ -316,6 +316,8 @@
             const filtered = isAdmin ? state.requests : state.requests.filter(r => r.userId === u.id);
             if (!filtered.length) { body.innerHTML = '<div class="p-8 text-center text-slate-300 font-bold">내역이 없습니다.</div>'; return; }
 
+            const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
+
             filtered.forEach(req => {
                 const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
                 let btns = '';
@@ -327,7 +329,7 @@
                     btns = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black">취소</button>`;
                 }
 
-                body.innerHTML += `<div class="flex flex-col p-4 w-full bg-white hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-0"><div class="flex justify-between items-center mb-3"><div class="flex items-center gap-2"><span class="font-black text-slate-800 text-[15px]">${req.userName}</span><span class="text-[9px] font-bold text-slate-400 border px-1 rounded">${ROLE_MAP[req.userRole] || req.userRole}</span></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span></div><div class="grid grid-cols-4 gap-2 text-center items-center text-[11px]"><div class="font-bold text-slate-700">${formatDate(req.leaveDate)}</div><div class="font-black text-blue-500">${req.type}</div><div class="text-slate-500 truncate" title="${req.reason}">${req.reason}</div><div class="text-slate-500 truncate" title="${req.handover}">${req.handover}</div></div><div class="flex justify-end gap-1.5 mt-3">${btns}</div></div>`;
+                body.innerHTML += `<div class="flex flex-col p-4 w-full bg-white hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-0"><div class="flex justify-between items-center mb-3"><div class="flex items-center gap-2"><span class="font-black text-slate-800 text-[15px]">${req.userName}</span><span class="text-[9px] font-bold text-slate-400 border px-1 rounded">${ROLE_MAP_LOCAL[req.userRole] || req.userRole}</span></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span></div><div class="grid grid-cols-4 gap-2 text-center items-center text-[11px]"><div class="font-bold text-slate-700">${formatDate(req.leaveDate)}</div><div class="font-black text-blue-500">${req.type}</div><div class="text-slate-500 truncate" title="${req.reason}">${req.reason}</div><div class="text-slate-500 truncate" title="${req.handover}">${req.handover}</div></div><div class="flex justify-end gap-1.5 mt-3">${btns}</div></div>`;
             });
             renderCalendar();
         }
@@ -336,12 +338,18 @@
         window.closeConfirmModal = function() { document.getElementById('confirm-modal').classList.add('hidden'); };
         document.getElementById('confirm-action-btn').onclick = () => { performDelete(deleteTargetId); closeConfirmModal(); };
 
+        function getDeductionDaysLocally(type) {
+            if (!type) return 0; const t = type.toLowerCase();
+            if (t.includes('무급')) return 0; if (t.includes('반차')) return 5 / 8; if (t.includes('잔여')) return 3 / 8; return 1; 
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const saved = safeStorage.get('leavepass_user');
             if (saved) {
                 const d = JSON.parse(saved); state.currentUser = d.user; state.requests = d.requests || [];
                 document.getElementById('auth-section').classList.add('hidden'); document.getElementById('main-section').classList.remove('hidden');
-                document.getElementById('welcome-msg').innerText = `안녕하세요 ${isAdminUser() ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
+                const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
+                document.getElementById('welcome-msg').innerText = `안녕하세요 ${state.currentUser.role.includes('admin') ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP_LOCAL[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
                 renderDashboard(); refreshData(false);
             } else document.getElementById('auth-section').classList.remove('hidden'), renderCalendar();
 
@@ -364,7 +372,6 @@
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
             if (res) { state.currentUser = res.user; state.requests = res.requests; renderDashboard(); }
         }
-        const isAdminUser = () => state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
         function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
     </script>
 </body>
