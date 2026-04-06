@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>스마트 연차 관리 시스템</title>
+    <title>서울더리본치과 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -193,7 +193,7 @@
                             </div>
                             <div id="detail-container" class="form-row hidden"><label class="label-text">상세 선택</label><select id="leave-detail" class="input-field cursor-pointer bg-blue-50/50 font-bold"></select></div>
                             <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" required class="input-field" placeholder="구체적인 사유 입력"></div>
-                            <div class="form-row"><label class="label-text">인수인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항"></div>
+                            <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항"></div>
                             <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3">신청하기</button>
                         </form>
                     </div>
@@ -413,7 +413,7 @@
             }
             const day = new Date(dateStr).getDay();
             if (day === 6) { typeSelect.add(new Option('토요일 반차', '토요일 반차')); typeSelect.add(new Option('무급 휴가', '무급 휴가')); }
-            else { typeSelect.add(new Option('일반 연차', '일반 연차')); typeSelect.add(new Option('오후 반차', '오후 반차')); typeSelect.add(new Option('오후 잔여', '오후 잔여')); typeSelect.add(new Option('토요일 잔여', '토요일 잔여')); typeSelect.add(new Option('무급 휴가', '무급 휴가')); }
+            else { typeSelect.add(new Option('일반 연차', '일반 연차')); typeSelect.add(new Option('오후 반차', '오후 반차')); typeSelect.add(new Option('오후 반차 잔여', '오후 반차 잔여')); typeSelect.add(new Option('토요일 잔여', '토요일 잔여')); typeSelect.add(new Option('무급 휴가', '무급 휴가')); }
             handleLeaveTypeChange();
         }
 
@@ -421,7 +421,7 @@
             const type = document.getElementById('leave-type').value, container = document.getElementById('detail-container'), select = document.getElementById('leave-detail');
             select.innerHTML = ''; container.classList.add('hidden');
             if (type.includes('반차')) { select.add(new Option(type + ' - 5시간 차감', type)); container.classList.remove('hidden'); }
-            else if (type.includes('잔여')) { ['전', '후', '야'].forEach(v => select.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); container.classList.remove('hidden'); }
+            else if (type.includes('잔여')) { ['10시~13시', '16시~19시', '18시~21시'].forEach(v => select.add(new Option(`${type} (${v}) - 3시간 차감`, `${type} (${v})`))); container.classList.remove('hidden'); }
         }
 
         function toggleLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
