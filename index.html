@@ -264,8 +264,8 @@
                                 <input type="text" id="leave-reason" required class="input-field" placeholder="구체적인 사유 입력">
                             </div>
                             <div class="form-row">
-                                <label class="label-text">인수인계</label>
-                                <input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 인계사항">
+                                <label class="label-text">인수자</label>
+                                <input type="text" id="leave-handover" required class="input-field" placeholder="인수자">
                             </div>
                             <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3 text-sm sm:text-base">
                                 신청하기
@@ -286,8 +286,8 @@
                             <table class="w-full text-left sm:min-w-[450px]">
                                 <thead class="hidden sm:table-header-group">
                                     <tr class="bg-slate-50/80">
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차일정 / 신청일</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차유형 / 상세사유</th>
+                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
+                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수자</th>
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
                                     </tr>
                                 </thead>
@@ -329,8 +329,8 @@
                                 <thead class="hidden sm:table-header-group">
                                     <tr class="bg-slate-50/80">
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차일정 / 유형</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
+                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
+                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수자</th>
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
                                     </tr>
@@ -910,33 +910,60 @@
                         
                         let cancelBtn = '';
                         if (req.status === '대기' || req.status === '1차 승인') {
-                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all">취소</button>`;
+                            cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="ml-2 px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-black transition-all">취소</button>`;
                         }
 
-                        // 🚀 모바일 최적화된 유저 히스토리 (세로 정렬)
+                        // 🚀 모바일 최적화 (일정, 유형, 사유, 인수 4단 가로 배치)
                         hist.innerHTML += `
-                            <tr class="hover:bg-slate-50 transition-all font-medium flex flex-col sm:table-row p-3 sm:p-0 border-b border-slate-100 sm:border-none">
-                                <td class="py-1 sm:p-5 flex justify-between items-center sm:table-cell">
-                                    <div class="text-xs sm:text-sm font-bold text-slate-700 sm:mb-1"><span class="sm:hidden text-[10px] text-slate-400 font-normal mr-2">일정</span>${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[10px] sm:text-xs text-slate-400"><span class="sm:hidden text-slate-400 mr-1">신청:</span>${formatDate(req.requestDate)}</div>
+                            <tr class="hover:bg-slate-50 transition-all font-medium flex flex-col sm:table-row p-4 sm:p-0 border-b border-slate-200 sm:border-b sm:border-slate-50 bg-white sm:bg-transparent rounded-xl sm:rounded-none mb-3 sm:mb-0 shadow-sm sm:shadow-none">
+                                
+                                <td class="pb-2 sm:hidden flex justify-between items-center border-b border-slate-50 mb-2">
+                                    <div class="text-[10px] text-slate-400 font-bold">신청일: ${formatDate(req.requestDate)}</div>
+                                    <div><span class="px-2.5 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span></div>
                                 </td>
-                                <td class="py-1 sm:p-5 flex flex-col sm:table-cell">
-                                    <div class="flex justify-between items-center sm:block sm:mb-1">
-                                        <span class="sm:hidden text-[10px] text-slate-400 font-normal">유형</span>
-                                        <div class="text-xs sm:text-sm font-black text-blue-500">${req.type}</div>
+
+                                <td class="py-0 sm:p-5 flex flex-col sm:table-cell w-full">
+                                    <div class="flex justify-between items-center sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal">일정</span>
+                                        <span class="text-xs text-slate-700 font-bold">${formatDate(req.leaveDate)}</span>
                                     </div>
-                                    <div class="flex justify-between items-start sm:block mt-1 sm:mt-0">
-                                        <span class="sm:hidden text-[10px] text-slate-400 font-normal mr-2">사유</span>
-                                        <div class="text-[11px] sm:text-xs text-slate-500 text-right sm:text-left">${req.reason}</div>
+                                    <div class="flex justify-between items-center sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal">유형</span>
+                                        <span class="text-[11px] font-black text-blue-500">${req.type}</span>
+                                    </div>
+                                    <div class="hidden sm:block">
+                                        <div class="text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
+                                        <div class="text-xs font-black text-blue-500 mt-1">${req.type}</div>
+                                        <div class="text-[10px] text-slate-400 mt-1">신청: ${formatDate(req.requestDate)}</div>
                                     </div>
                                 </td>
-                                <td class="py-2 sm:p-5 flex justify-between items-center sm:table-cell text-right mt-2 sm:mt-0 border-t border-slate-50 sm:border-none">
-                                    <span class="sm:hidden text-[10px] text-slate-400 font-normal">상태</span>
+
+                                <td class="py-0 sm:p-5 flex flex-col sm:table-cell w-full">
+                                    <div class="flex justify-between items-start sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal shrink-0 mr-2">사유</span>
+                                        <span class="text-xs text-slate-700 text-right break-all">${req.reason}</span>
+                                    </div>
+                                    <div class="flex justify-between items-start sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal shrink-0 mr-2">인수</span>
+                                        <span class="text-xs text-slate-700 text-right break-all">${req.handover}</span>
+                                    </div>
+                                    <div class="hidden sm:block whitespace-normal break-keep">
+                                        <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
+                                        <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                    </div>
+                                </td>
+
+                                <td class="hidden sm:table-cell p-5 text-right align-middle">
                                     <div class="flex items-center justify-end">
-                                        <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
+                                        <span class="px-3 py-1.5 rounded-full text-xs font-black ${color}">${req.status}</span>
                                         ${cancelBtn}
                                     </div>
                                 </td>
+
+                                ${cancelBtn ? `
+                                <td class="pt-3 sm:hidden border-t border-slate-50 text-right w-full flex justify-end mt-2">
+                                    ${cancelBtn}
+                                </td>` : ''}
                             </tr>
                         `;
                     });
@@ -1040,24 +1067,10 @@
                                 actionBtns = `
                                     <button onclick="updateStatus('${req.id}', '최종 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-emerald-500 text-white rounded text-[11px] sm:text-xs font-bold">최종 승인</button>
                                     <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
-                                `;
-                            } else if (req.status === '최종 승인') {
-                                actionBtns = `
-                                    <button onclick="updateStatus('${req.id}', '1차 승인')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-400 text-white rounded text-[11px] sm:text-xs font-bold">1차 강등</button>
-                                    <button onclick="updateStatus('${req.id}', '반려')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-500 text-white rounded text-[11px] sm:text-xs font-bold">반려</button>
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
-                                `;
-                            } else if (req.status === '반려') {
-                                actionBtns = `
-                                    <button onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-400 text-white rounded text-[11px] sm:text-xs font-bold"><i class="fas fa-trash"></i></button>
-                                `;
-                            }
-                        }
-
-                        // 🚀 모바일 최적화된 관리자 큐 리스트 (카드뷰 형식)
+                        // 🚀 모바일 최적화된 관리자 큐 리스트 (일정, 유형, 사유, 인수 4단 가로 배치)
                         adminBody.innerHTML += `
                             <tr class="hover:bg-slate-50 transition-all font-medium flex flex-col sm:table-row p-4 sm:p-0 border-b border-slate-200 sm:border-b sm:border-slate-50 bg-white sm:bg-transparent rounded-xl sm:rounded-none mb-3 sm:mb-0 shadow-sm sm:shadow-none">
+                                
                                 <td class="pb-2 sm:p-4 flex justify-between items-center sm:table-cell border-b border-slate-50 sm:border-none mb-2 sm:mb-0">
                                     <div class="flex items-center gap-2 sm:block">
                                         <div class="font-black text-slate-800 text-sm sm:text-base">${req.userName}</div>
@@ -1068,27 +1081,41 @@
                                     </div>
                                 </td>
                                 
-                                <td class="py-1 sm:p-4 flex justify-between sm:flex-col sm:table-cell items-center sm:items-start">
-                                    <span class="sm:hidden text-[10px] text-slate-400 font-normal w-16 shrink-0">일정/유형</span>
-                                    <div class="flex flex-col sm:block text-right sm:text-left">
-                                        <div class="text-xs sm:text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
-                                        <div class="text-[11px] sm:text-sm font-black text-blue-500 sm:mt-1">${req.type}</div>
+                                <td class="py-0 sm:p-4 flex flex-col sm:table-cell w-full">
+                                    <div class="flex justify-between items-center sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal">일정</span>
+                                        <span class="text-xs text-slate-700 font-bold">${formatDate(req.leaveDate)}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal">유형</span>
+                                        <span class="text-[11px] font-black text-blue-500">${req.type}</span>
+                                    </div>
+                                    <div class="hidden sm:block">
+                                        <div class="text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
+                                        <div class="text-xs font-black text-blue-500 mt-1">${req.type}</div>
                                     </div>
                                 </td>
                                 
-                                <td class="py-1 sm:p-4 flex justify-between sm:flex-col sm:table-cell items-start">
-                                    <span class="sm:hidden text-[10px] text-slate-400 font-normal w-16 shrink-0 pt-1">사유/인수</span>
-                                    <div class="flex flex-col sm:block text-right sm:text-left whitespace-normal break-keep">
-                                        <div class="text-xs sm:text-sm text-slate-700"><span class="hidden sm:inline font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                        <div class="text-xs sm:text-sm text-slate-700 sm:mt-1"><span class="hidden sm:inline font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                <td class="py-0 sm:p-4 flex flex-col sm:table-cell w-full">
+                                    <div class="flex justify-between items-start sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal shrink-0 mr-2">사유</span>
+                                        <span class="text-xs text-slate-700 text-right break-all">${req.reason}</span>
+                                    </div>
+                                    <div class="flex justify-between items-start sm:hidden py-1.5">
+                                        <span class="text-[10px] text-slate-400 font-normal shrink-0 mr-2">인수자</span>
+                                        <span class="text-xs text-slate-700 text-right break-all">${req.handover}</span>
+                                    </div>
+                                    <div class="hidden sm:block whitespace-normal break-keep">
+                                        <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
+                                        <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수자:</span> ${req.handover}</div>
                                     </div>
                                 </td>
                                 
                                 <td class="hidden sm:table-cell p-4 align-middle">
-                                    <span class="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
+                                    <span class="px-3 py-1.5 rounded-md text-xs font-black ${color}">${req.status}</span>
                                 </td>
                                 
-                                <td class="pt-3 sm:p-4 mt-2 sm:mt-0 border-t border-slate-50 sm:border-none text-right sm:table-cell w-full">
+                                <td class="pt-3 sm:p-4 mt-2 sm:mt-0 border-t border-slate-50 sm:border-none text-right flex sm:table-cell justify-end w-full">
                                     <div class="flex justify-end gap-1.5 flex-wrap w-full">${actionBtns}</div>
                                 </td>
                             </tr>
