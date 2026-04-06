@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>서울더리본치과 연차 시스템</title>
+    <title>서울더리본치과 연차 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -247,7 +247,6 @@
                         <form id="leave-request-form" class="w-full">
                             <div class="form-row">
                                 <label class="label-text">연차 일정</label>
-                                <!-- 날짜 직접 입력 시에도 완벽히 반응하도록 설계됨 -->
                                 <input type="date" id="leave-date" required class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();">
                             </div>
                             <div class="form-row">
@@ -283,16 +282,16 @@
                                 <i class="fas fa-sync-alt mr-1"></i> 새로고침
                             </button>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left min-w-[450px]">
-                                <thead>
+                        <div class="overflow-x-auto sm:overflow-visible">
+                            <table class="w-full text-left sm:min-w-[450px]">
+                                <thead class="hidden sm:table-header-group">
                                     <tr class="bg-slate-50/80">
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차일정 / 신청일</th>
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차유형 / 상세사유</th>
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
                                     </tr>
                                 </thead>
-                                <tbody id="history-body" class="divide-y divide-slate-100"></tbody>
+                                <tbody id="history-body" class="divide-y divide-slate-100 flex flex-col sm:table-row-group"></tbody>
                             </table>
                         </div>
                     </div>
@@ -324,9 +323,10 @@
                             </div>
                         </div>
 
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left min-w-[700px]">
-                                <thead>
+                        <!-- 🚀 모바일 최적화된 반응형 카드 뷰 적용 -->
+                        <div class="overflow-x-auto sm:overflow-visible bg-slate-50/50 sm:bg-transparent p-3 sm:p-0">
+                            <table class="w-full text-left sm:min-w-[700px]">
+                                <thead class="hidden sm:table-header-group">
                                     <tr class="bg-slate-50/80">
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차일정 / 유형</th>
@@ -335,7 +335,7 @@
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
                                     </tr>
                                 </thead>
-                                <tbody id="admin-queue-body" class="divide-y divide-slate-100"></tbody>
+                                <tbody id="admin-queue-body" class="flex flex-col gap-3 sm:gap-0 sm:table-row-group"></tbody>
                             </table>
                         </div>
                     </div>
@@ -461,13 +461,11 @@
                 if (state.currentUser) {
                     const isAdmin = state.currentUser.role === 'admin' || state.currentUser.role === 'subadmin';
                     
-                    // 🚀 달력에는 모든 팀의 내역이 동일하게 표시되도록 필터링 생략
                     dayRequests = state.requests.filter(r => 
                         formatDate(r.leaveDate) === dateStr && r.status !== '반려'
                     );
 
                     if (!isAdmin) {
-                        // 🚀 폼 신청 정원 차단을 위한 계산 로직은 '본인 소속 팀'에 한정
                         const teamRequests = dayRequests.filter(r => r.userRole === state.currentUser.role);
                         teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
                         teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
@@ -510,7 +508,6 @@
                 const statusBadge = document.createElement('span');
                 statusBadge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md truncate max-w-[60%] text-center `;
                 
-                // 🚀 상단 배지는 내 팀의 기준에 따라 표시됨
                 if (isPast) {
                     statusBadge.className += 'bg-slate-100 text-slate-400';
                     statusBadge.innerText = '마감';
@@ -533,7 +530,6 @@
                 const reqList = document.createElement('div');
                 reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
                 
-                // 🚀 모든 팀의 내역을 캘린더에 렌더링
                 dayRequests.forEach(req => {
                     const reqItem = document.createElement('div');
                     const colorClass = (req.status === '최종 승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
@@ -583,14 +579,12 @@
             typeSelect.innerHTML = ''; 
             detailContainer.classList.add('hidden');
 
-            // 1. 기본 상태 (활성화)로 리셋
             typeSelect.disabled = false;
             typeSelect.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold';
             submitBtn.disabled = false;
             submitBtn.className = 'w-full bg-slate-800 text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black hover:bg-black transition-all shadow-xl mt-3 text-sm sm:text-base';
             submitBtn.innerText = '신청하기';
 
-            // 2. 날짜 미선택, 휴무일, 과거 일자 차단
             if (!dateStr || isNaN(day) || day === 0 || day === 3 || dateStr < formatDate(new Date())) {
                 typeSelect.add(new Option('↑ 일정을 선택하세요', ''));
                 if (dateStr && (day === 0 || day === 3)) typeSelect.options[0].text = '휴무일은 신청할 수 없습니다';
@@ -604,7 +598,6 @@
                 return;
             }
 
-            // 3. 팀 정원 상태 조회 (수동 입력 시 방어 위해 내부에서 직접 조회)
             let currentTeamClosed = false;
             let currentTeamPending = false;
 
@@ -621,7 +614,6 @@
                 currentTeamPending = !currentTeamClosed && (pending >= 1);
             }
 
-            // 4. 내 소속 팀의 정원 마감 시 폼 비활성화
             if (currentTeamClosed || currentTeamPending) {
                 typeSelect.add(new Option('신청 정원 마감', ''));
                 typeSelect.disabled = true;
@@ -633,14 +625,13 @@
                 return;
             }
 
-            // 5. 정상 선택 시 목록 부여
             if (day === 6) {
                 typeSelect.add(new Option('토요일 반차', '토요일 반차'));
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
             } else {
                 typeSelect.add(new Option('일반 연차 (1일)', '일반 연차'));
                 typeSelect.add(new Option('오후 반차', '오후 반차'));
-                typeSelect.add(new Option('오후 반차 잔여', '오후 반차 잔여'));
+                typeSelect.add(new Option('오후 잔여', '오후 잔여'));
                 typeSelect.add(new Option('토요일 잔여', '토요일 잔여'));
                 typeSelect.add(new Option('무급 휴가 (차감없음)', '무급 휴가'));
             }
@@ -821,7 +812,6 @@
             renderDashboard();
         }
 
-        // 🚀 최종 이중 보안 폼 제출
         document.getElementById('leave-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const requestDate = formatDate(new Date()); 
@@ -840,7 +830,6 @@
                 return showAlert('유효하지 않은 일정입니다. 다시 선택해주세요.', 'error');
             }
 
-            // 🚀 제출하는 순간 서버 최신 상태 기반 한 번 더 검증
             if (state.currentUser.role === 'desk' || state.currentUser.role === 'user') {
                 const teamRequests = state.requests.filter(r => 
                     formatDate(r.leaveDate) === leaveDate && 
@@ -924,17 +913,25 @@
                             cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all">취소</button>`;
                         }
 
+                        // 🚀 모바일 최적화된 유저 히스토리 (세로 정렬)
                         hist.innerHTML += `
-                            <tr class="hover:bg-slate-50 transition-all font-medium">
-                                <td class="p-3 sm:p-5">
-                                    <div class="text-xs sm:text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[10px] sm:text-xs text-slate-400 mt-1">신청: ${formatDate(req.requestDate)}</div>
+                            <tr class="hover:bg-slate-50 transition-all font-medium flex flex-col sm:table-row p-3 sm:p-0 border-b border-slate-100 sm:border-none">
+                                <td class="py-1 sm:p-5 flex justify-between items-center sm:table-cell">
+                                    <div class="text-xs sm:text-sm font-bold text-slate-700 sm:mb-1"><span class="sm:hidden text-[10px] text-slate-400 font-normal mr-2">일정</span>${formatDate(req.leaveDate)}</div>
+                                    <div class="text-[10px] sm:text-xs text-slate-400"><span class="sm:hidden text-slate-400 mr-1">신청:</span>${formatDate(req.requestDate)}</div>
                                 </td>
-                                <td class="p-3 sm:p-5">
-                                    <div class="text-xs sm:text-sm font-black text-blue-500">${req.type}</div>
-                                    <div class="text-[11px] sm:text-xs text-slate-500 mt-1">${req.reason}</div>
+                                <td class="py-1 sm:p-5 flex flex-col sm:table-cell">
+                                    <div class="flex justify-between items-center sm:block sm:mb-1">
+                                        <span class="sm:hidden text-[10px] text-slate-400 font-normal">유형</span>
+                                        <div class="text-xs sm:text-sm font-black text-blue-500">${req.type}</div>
+                                    </div>
+                                    <div class="flex justify-between items-start sm:block mt-1 sm:mt-0">
+                                        <span class="sm:hidden text-[10px] text-slate-400 font-normal mr-2">사유</span>
+                                        <div class="text-[11px] sm:text-xs text-slate-500 text-right sm:text-left">${req.reason}</div>
+                                    </div>
                                 </td>
-                                <td class="p-3 sm:p-5 text-right">
+                                <td class="py-2 sm:p-5 flex justify-between items-center sm:table-cell text-right mt-2 sm:mt-0 border-t border-slate-50 sm:border-none">
+                                    <span class="sm:hidden text-[10px] text-slate-400 font-normal">상태</span>
                                     <div class="flex items-center justify-end">
                                         <span class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
                                         ${cancelBtn}
@@ -1058,25 +1055,41 @@
                             }
                         }
 
+                        // 🚀 모바일 최적화된 관리자 큐 리스트 (카드뷰 형식)
                         adminBody.innerHTML += `
-                            <tr class="hover:bg-slate-50 transition-all font-medium border-b border-slate-50">
-                                <td class="p-3 sm:p-4">
-                                    <div class="font-black text-slate-800 text-xs sm:text-base">${req.userName}</div>
-                                    <div class="text-[10px] sm:text-xs text-slate-400 font-bold mt-1">${ROLE_MAP[req.userRole] || req.userRole}</div>
+                            <tr class="hover:bg-slate-50 transition-all font-medium flex flex-col sm:table-row p-4 sm:p-0 border-b border-slate-200 sm:border-b sm:border-slate-50 bg-white sm:bg-transparent rounded-xl sm:rounded-none mb-3 sm:mb-0 shadow-sm sm:shadow-none">
+                                <td class="pb-2 sm:p-4 flex justify-between items-center sm:table-cell border-b border-slate-50 sm:border-none mb-2 sm:mb-0">
+                                    <div class="flex items-center gap-2 sm:block">
+                                        <div class="font-black text-slate-800 text-sm sm:text-base">${req.userName}</div>
+                                        <div class="text-[10px] sm:text-xs text-slate-400 font-bold sm:mt-1">${ROLE_MAP[req.userRole] || req.userRole}</div>
+                                    </div>
+                                    <div class="sm:hidden">
+                                        <span class="px-2.5 py-1 rounded-md text-[10px] font-black ${color}">${req.status}</span>
+                                    </div>
                                 </td>
-                                <td class="p-3 sm:p-4">
-                                    <div class="text-xs sm:text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[11px] sm:text-sm font-black text-blue-500 mt-1">${req.type}</div>
+                                
+                                <td class="py-1 sm:p-4 flex justify-between sm:flex-col sm:table-cell items-center sm:items-start">
+                                    <span class="sm:hidden text-[10px] text-slate-400 font-normal w-16 shrink-0">일정/유형</span>
+                                    <div class="flex flex-col sm:block text-right sm:text-left">
+                                        <div class="text-xs sm:text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
+                                        <div class="text-[11px] sm:text-sm font-black text-blue-500 sm:mt-1">${req.type}</div>
+                                    </div>
                                 </td>
-                                <td class="p-3 sm:p-4 whitespace-normal break-keep">
-                                    <div class="text-xs sm:text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                    <div class="text-xs sm:text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                
+                                <td class="py-1 sm:p-4 flex justify-between sm:flex-col sm:table-cell items-start">
+                                    <span class="sm:hidden text-[10px] text-slate-400 font-normal w-16 shrink-0 pt-1">사유/인수</span>
+                                    <div class="flex flex-col sm:block text-right sm:text-left whitespace-normal break-keep">
+                                        <div class="text-xs sm:text-sm text-slate-700"><span class="hidden sm:inline font-bold text-slate-400">사유:</span> ${req.reason}</div>
+                                        <div class="text-xs sm:text-sm text-slate-700 sm:mt-1"><span class="hidden sm:inline font-bold text-slate-400">인수:</span> ${req.handover}</div>
+                                    </div>
                                 </td>
-                                <td class="p-3 sm:p-4">
+                                
+                                <td class="hidden sm:table-cell p-4 align-middle">
                                     <span class="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md text-[10px] sm:text-xs font-black ${color}">${req.status}</span>
                                 </td>
-                                <td class="p-3 sm:p-4 text-right">
-                                    <div class="flex justify-end gap-1.5 flex-wrap">${actionBtns}</div>
+                                
+                                <td class="pt-3 sm:p-4 mt-2 sm:mt-0 border-t border-slate-50 sm:border-none text-right sm:table-cell w-full">
+                                    <div class="flex justify-end gap-1.5 flex-wrap w-full">${actionBtns}</div>
                                 </td>
                             </tr>
                         `;
