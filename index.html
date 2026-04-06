@@ -187,17 +187,18 @@
 
         <!-- 메인 섹션 -->
         <div id="main-section" class="hidden">
-            <nav class="flex flex-row justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white w-full relative z-50">
-                <div class="flex items-center gap-3 sm:gap-4">
+            <!-- 🚀 네비게이션: 로그아웃 버튼 터치 오류 완벽 해결 -->
+            <nav class="flex flex-row justify-between items-center mb-6 sm:mb-8 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white w-full relative z-50 overflow-visible">
+                <div class="flex items-center gap-3 sm:gap-4 min-w-0">
                     <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-lg shrink-0">
                         <i class="fas fa-calendar-check text-lg sm:text-2xl"></i>
                     </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] sm:text-xs font-black text-blue-600 tracking-widest uppercase">SEOUL THE RIBBON</span>
-                        <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter"></h2>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[10px] sm:text-xs font-black text-blue-600 tracking-widest uppercase truncate">SEOUL THE RIBBON</span>
+                        <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter truncate"></h2>
                     </div>
                 </div>
-                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer pointer-events-auto" style="z-index: 100;">
+                <button type="button" id="btn-logout" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 bg-slate-100 sm:bg-transparent rounded-xl sm:rounded-2xl transition-all shrink-0 cursor-pointer pointer-events-auto relative z-[100]">
                     <i class="fas fa-sign-out-alt text-xl sm:text-2xl pointer-events-none"></i>
                 </button>
             </nav>
@@ -227,7 +228,7 @@
                 
                 <div id="calendar-grid" class="calendar-grid"></div>
 
-                <!-- 🚀 캘린더 클릭 시 나타나는 해당 일자 신청 내역 요약 -->
+                <!-- 캘린더 클릭 시 나타나는 해당 일자 신청 내역 요약 -->
                 <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm animate-in fade-in slide-in-from-top-2">
                     <h4 class="text-xs sm:text-sm font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
                         <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
@@ -289,7 +290,7 @@
                             </button>
                         </div>
                         <div class="w-full p-0 sm:p-2 bg-slate-50/30 sm:bg-transparent">
-                            <table class="w-full text-left sm:min-w-[450px]">
+                            <table class="w-full text-left sm:min-w-[450px] border-collapse">
                                 <thead class="hidden sm:table-header-group border-b border-slate-100">
                                     <tr class="bg-slate-50/80">
                                         <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
@@ -330,7 +331,7 @@
                         </div>
 
                         <div class="w-full p-0 sm:p-2 bg-slate-50/30 sm:bg-transparent">
-                            <table class="w-full text-left sm:min-w-[700px]">
+                            <table class="w-full text-left sm:min-w-[700px] border-collapse">
                                 <thead class="hidden sm:table-header-group border-b border-slate-100">
                                     <tr class="bg-slate-50/80">
                                         <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
@@ -376,13 +377,14 @@
             }
         };
 
-        // 🚀 로그아웃 기능: 클릭 즉시 화면을 덮고 강제 초기화
+        // 🚀 로그아웃 기능 강화: 상태 초기화 후 즉시 이동
         window.logout = function() {
             safeStorage.remove('leavepass_user');
             safeStorage.remove('leavepass_cache', true);
             state.currentUser = null;
             state.requests = [];
             
+            // UI 초기화
             document.getElementById('main-section').classList.add('hidden');
             document.getElementById('auth-section').classList.remove('hidden');
             document.getElementById('login-form').reset();
@@ -390,7 +392,10 @@
             document.getElementById('login-id').value = '';
             selectedDateStr = '';
             
-            try { location.reload(); } catch(e) {}
+            // 페이지 강제 새로고침
+            setTimeout(() => {
+                location.href = location.href.split('#')[0];
+            }, 50);
         };
 
         function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
@@ -460,6 +465,7 @@
             }, 3000);
         }
 
+        // 🚀 캘린더 렌더링: 관리자도 전 직원의 신청 현황에 따른 상태 표시(승인중/마감/가능)를 볼 수 있도록 수정
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -486,13 +492,15 @@
                         formatDate(r.leaveDate) === dateStr && r.status !== '반려'
                     );
 
-                    if (!isAdmin) {
+                    if (isAdmin) {
+                        // 🚀 관리자는 전체 신청 건수 기준으로 상태 표시
+                        teamApprovedCount = allDayRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
+                        teamPendingCount = allDayRequests.filter(r => r.status === '대기').length;
+                    } else {
+                        // 일반 유저는 본인 팀 기준
                         const teamRequests = allDayRequests.filter(r => r.userRole === state.currentUser.role);
                         teamApprovedCount = teamRequests.filter(r => r.status === '최종 승인' || r.status === '1차 승인').length;
                         teamPendingCount = teamRequests.filter(r => r.status === '대기').length;
-                    } else {
-                        teamApprovedCount = 0;
-                        teamPendingCount = 0;
                     }
                 }
                 
@@ -544,7 +552,6 @@
                 }
                 cell.appendChild(statusBadge);
 
-                // 🚀 클릭 시 하단 요약 박스 활성화
                 if (!isClosedDay) {
                     cell.onclick = () => {
                         selectedDateStr = dateStr;
@@ -571,7 +578,7 @@
             }
         }
 
-        // 🚀 클릭 시 캘린더 하단에 누가 어떤 연차를 썼는지 보여주는 요약 박스 (복구됨)
+        // 🚀 캘린더 날짜 클릭 시 나타나는 하단 요약 박스
         function renderDateSummary(dateStr, dayRequests) {
             const container = document.getElementById('date-summary-container');
             const listEl = document.getElementById('date-summary-list');
@@ -837,7 +844,7 @@
                 hist.innerHTML = '';
                 let myRequests = state.requests.filter(r => r.userId === u.id);
                 if (myRequests.length === 0) {
-                    hist.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>';
+                    hist.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-slate-300 font-bold w-full">내역이 없습니다.</td></tr>';
                 } else {
                     myRequests.forEach(req => {
                         const color = req.status === '최종 승인' ? 'bg-emerald-100 text-emerald-600' : 
@@ -849,7 +856,7 @@
                             cancelBtn = `<button type="button" onclick="openConfirmModal('${req.id}')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-md text-[10px] sm:text-xs font-black transition-all shadow-sm">취소</button>`;
                         }
 
-                        // 🚀 캡처 사진 100% 동일: 모바일에서 상하 분리형 카드 디자인
+                        // 🚀 일반 사원 전용 카드형 리스트 (image_8e1fa6.jpg 반영)
                         hist.innerHTML += `
                             <!-- 모바일 카드 뷰 -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
@@ -1016,7 +1023,7 @@
                             }
                         }
 
-                        // 🚀 어드민 큐 목록: 모바일 사진 100% 동일 반영 (좌 우측 분리된 카드형 디자인)
+                        // 🚀 관리자 신청 현황 카드 뷰 (image_8e1fa6.jpg 반영)
                         adminBody.innerHTML += `
                             <!-- 모바일 카드 뷰 -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
@@ -1203,4 +1210,4 @@
         });
     </script>
 </body>
-</html>
+</html>eof
