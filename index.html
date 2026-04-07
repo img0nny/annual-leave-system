@@ -216,7 +216,7 @@
         const formatDate = (s) => {
             if (!s) return "-";
             const d = new Date(s);
-            if (isNaN(d.getTime())) return s.includes('T') ? s.split('T')[0] : s;
+            if (isNaN(d.getTime())) return String(s).includes('T') ? String(s).split('T')[0] : String(s);
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         };
 
@@ -251,14 +251,16 @@
 
             for (let i = 1; i <= last; i++) {
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
-                      dayOfWeek = new Date(year, month, i).getDay(), allDayReqs = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && r.status !== '반려');
+                      dayOfWeek = new Date(year, month, i).getDay();
+                      
+                const allDayReqs = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && String(r.status) !== '반려');
                 
                 let approved = 0, pending = 0;
                 if (state.currentUser) {
-                    const isAdmin = state.currentUser.role.includes('admin');
-                    const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => r.userRole === state.currentUser.role);
-                    approved = targetReqs.filter(r => r.status.includes('승인')).length;
-                    pending = targetReqs.filter(r => r.status === '대기').length;
+                    const isAdmin = String(state.currentUser.role).includes('admin');
+                    const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => String(r.userRole) === String(state.currentUser.role));
+                    approved = targetReqs.filter(r => String(r.status).includes('승인')).length;
+                    pending = targetReqs.filter(r => String(r.status) === '대기').length;
                 }
 
                 const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
@@ -300,8 +302,6 @@
                 return;
             }
             const day = new Date(date).getDay();
-            
-            // 🚀 '오후 반차 잔여' 옵션을 목록에 추가 (요청 사항 반영)
             if (day === 6) { select.add(new Option('토요일 반차', '토요일 반차')); select.add(new Option('무급 휴가', '무급 휴가')); }
             else { ['일반 연차', '오후 반차', '오후 반차 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
             handleLeaveTypeChange();
@@ -310,22 +310,17 @@
         function handleLeaveTypeChange() {
             const type = document.getElementById('leave-type').value, box = document.getElementById('detail-container'), sel = document.getElementById('leave-detail');
             sel.innerHTML = ''; box.classList.add('hidden');
-            
-            // 🚀 잔여 여부를 먼저 체크하여 '오후 반차 잔여'가 올바른 옵션을 타도록 순서 변경
             if (type.includes('잔여')) { 
-                let displayType = type;
-                if (type === '오후 반차 잔여') displayType = '오후 잔여'; // UI 상으로는 '오후 잔여'로 표시 유지
-                
+                let displayType = type; if (type === '오후 반차 잔여') displayType = '오후 잔여'; 
                 ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${displayType} (${v}) - 3시간 차감`, `${type} (${v})`))); 
                 box.classList.remove('hidden'); 
-            }
-            else if (type.includes('반차')) { 
+            } else if (type.includes('반차')) { 
                 sel.add(new Option(type + ' - 5시간 차감', type)); 
                 box.classList.remove('hidden'); 
             }
         }
 
-        async function apiCall(action, data = {}, loader = true) {
+        async function apiCall(action, data = {}, loader = false) {
             if (loader) document.getElementById('loading').classList.remove('hidden');
             try {
                 const res = await fetch(GAS_WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
@@ -335,40 +330,51 @@
             } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
         }
 
+        // 🚀 성능 최적화: 즉각적인 UI 반영 (Optimistic Update)
         async function updateStatus(id, status) {
-            const idx = state.requests.findIndex(r => r.id == id); if (idx === -1) return;
-            const old = state.requests[idx].status; state.requests[idx].status = status; renderDashboard();
+            const idx = state.requests.findIndex(r => String(r.id) === String(id)); if (idx === -1) return;
+            const old = state.requests[idx].status; state.requests[idx].status = status; renderDashboard(); renderCalendar();
             const res = await apiCall('updateStatus', { requestId: id, status }, false);
-            if (!res) { state.requests[idx].status = old; renderDashboard(); } else showAlert('반영 완료', 'success');
+            if (!res) { state.requests[idx].status = old; renderDashboard(); renderCalendar(); } else showAlert('반영 완료', 'success');
         }
 
         async function performDelete(id) {
-            const original = [...state.requests]; state.requests = state.requests.filter(r => r.id != id); renderDashboard();
+            const original = [...state.requests]; state.requests = state.requests.filter(r => String(r.id) !== String(id)); renderDashboard(); renderCalendar();
             const res = await apiCall('deleteRequest', { requestId: id }, false);
-            if (!res) { state.requests = original; renderDashboard(); } else showAlert('삭제/취소 완료', 'success');
+            if (!res) { state.requests = original; renderDashboard(); renderCalendar(); } else showAlert('삭제/취소 완료', 'success');
         }
 
+        function getDeductionDaysLocally(type) {
+            if (!type) return 0; const t = String(type).toLowerCase();
+            if (t.includes('무급')) return 0; 
+            if (t.includes('잔여')) return 3 / 8; 
+            if (t.includes('반차')) return 5 / 8; 
+            return 1; 
+        }
+
+        // 🚀 에러 방지: 데이터 파싱을 모두 String 캐스팅을 거치도록 처리하여 버그 원천 차단
         function renderDashboard() {
             const u = state.currentUser; if (!u) return;
-            const isAdmin = u.role.includes('admin');
+            const isAdmin = String(u.role).includes('admin');
             let used = parseFloat(u.used) || 0;
-            state.requests.forEach(r => { if (r.userId === u.id && r.status !== '최종 승인' && r.status !== '반려') used += getDeductionDaysLocally(r.type); });
+            state.requests.forEach(r => { if (String(r.userId) === String(u.id) && String(r.status) !== '최종 승인' && String(r.status) !== '반려') used += getDeductionDaysLocally(r.type); });
             document.getElementById('total-leave').innerText = u.total;
             document.getElementById('remaining-leave').innerText = formatDaysHours(parseFloat(u.total) - used);
 
             const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
-            // 일반 사원 패널
+            // 일반 사원 패널 (100% 롤백 완료)
             if (!isAdmin) {
                 const body = document.getElementById('history-body'); body.innerHTML = '';
-                const filtered = state.requests.filter(r => r.userId === u.id);
+                const filtered = state.requests.filter(r => String(r.userId) === String(u.id));
                 if (!filtered.length) { body.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>'; }
                 else {
                     filtered.forEach(req => {
-                        const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
+                        const statusStr = String(req.status || '');
+                        const color = statusStr.includes('최종') ? 'bg-emerald-100 text-emerald-600' : statusStr.includes('1차') ? 'bg-blue-100 text-blue-600' : (statusStr === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
                         let cancelBtn = '';
-                        if (!req.status.includes('승인') || req.status === '대기') {
-                            cancelBtn = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black">취소</button>`;
+                        if (!statusStr.includes('승인') || statusStr === '대기') {
+                            cancelBtn = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black hover:bg-rose-100 hover:text-rose-600 transition-all">취소</button>`;
                         }
                         body.innerHTML += `
                             <!-- 모바일 카드 뷰 -->
@@ -418,7 +424,7 @@
                 }
             }
             
-            // 관리자 패널
+            // 관리자 패널 (100% 롤백 완료)
             if (isAdmin) {
                 const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
                 const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
@@ -426,26 +432,26 @@
                 let filtered = state.requests;
                 
                 if (searchKeyword) {
-                    filtered = filtered.filter(req => req.userName.toLowerCase().includes(searchKeyword));
+                    filtered = filtered.filter(req => String(req.userName || '').toLowerCase().includes(searchKeyword));
                     const matchedNames = [...new Set(filtered.map(r => r.userName))];
                     if (matchedNames.length === 1) {
                         const tName = matchedNames[0], tId = filtered.find(r => r.userName === tName).userId;
                         let tTotal = 15, tUsed = 0;
                         if (state.allUsers) {
-                            const found = state.allUsers.find(user => user.id === tId);
+                            const found = state.allUsers.find(user => String(user.id) === String(tId));
                             if (found) {
                                 tTotal = parseFloat(found.total) || 0; tUsed = parseFloat(found.used) || 0;
-                                filtered.forEach(r => { if (r.userId === tId && (r.status === '대기' || r.status === '1차 승인')) tUsed += getDeductionDaysLocally(r.type); });
+                                filtered.forEach(r => { if (String(r.userId) === String(tId) && (r.status === '대기' || r.status === '1차 승인')) tUsed += getDeductionDaysLocally(r.type); });
                             }
                         } else {
                             filtered.forEach(r => {
-                                if (r.status === '최종 승인' || r.status === '1차 승인' || r.status === '대기') {
+                                if (String(r.userId) === String(tId) && (r.status === '최종 승인' || r.status === '1차 승인' || r.status === '대기')) {
                                     used += getDeductionDaysLocally(r.type);
                                 }
                             });
                         }
                         
-                        const remain = total - used;
+                        const remain = tTotal - tUsed;
                         
                         document.getElementById('search-summary-name').innerText = tName;
                         document.getElementById('search-summary-total').innerText = tTotal + "일";
@@ -459,12 +465,13 @@
                 if (!filtered.length) { adminBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-300 font-bold">검색된 내역이 없습니다.</td></tr>'; }
                 else {
                     filtered.forEach(req => {
-                        const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : (req.status === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
+                        const statusStr = String(req.status || '');
+                        const color = statusStr.includes('최종') ? 'bg-emerald-100 text-emerald-600' : statusStr.includes('1차') ? 'bg-blue-100 text-blue-600' : (statusStr === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
                         let btns = '';
-                        if (u.role === 'subadmin' && req.status === '대기') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">1차 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">반려</button>`;
-                        else if (u.role === 'admin' && req.status === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','최종 승인')" class="bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">최종 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">반려</button>`;
-                        else if (u.role === 'subadmin' && req.status === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','대기')" class="bg-amber-400 text-white px-2 py-1.5 rounded text-[10px] font-bold">대기전환</button>`;
-                        else if (u.role === 'admin' && req.status === '최종 승인') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-400 text-white px-2 py-1.5 rounded text-[10px] font-bold">1차 강등</button>`;
+                        if (String(u.role) === 'subadmin' && statusStr === '대기') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">1차 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">반려</button>`;
+                        else if (String(u.role) === 'admin' && statusStr === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','최종 승인')" class="bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">최종 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">반려</button>`;
+                        else if (String(u.role) === 'subadmin' && statusStr === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','대기')" class="bg-amber-400 text-white px-2 py-1.5 rounded text-[10px] font-bold">대기전환</button>`;
+                        else if (String(u.role) === 'admin' && statusStr === '최종 승인') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-400 text-white px-2 py-1.5 rounded text-[10px] font-bold">1차 강등</button>`;
                         btns += `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-400 text-white px-2 py-1.5 rounded text-[10px] font-bold ml-1"><i class="fas fa-trash"></i></button>`;
 
                         adminBody.innerHTML += `
@@ -521,21 +528,11 @@
                     });
                 }
             }
-            renderCalendar();
         }
 
         window.openConfirmAction = function(id, action) { deleteTargetId = id; document.getElementById('confirm-modal').classList.remove('hidden'); };
         window.closeConfirmModal = function() { document.getElementById('confirm-modal').classList.add('hidden'); };
         document.getElementById('confirm-action-btn').onclick = () => { performDelete(deleteTargetId); closeConfirmModal(); };
-
-        // 🚀 순서를 바꾸어 '잔여'가 '반차'보다 먼저 체크되게 수정
-        function getDeductionDaysLocally(type) {
-            if (!type) return 0; const t = type.toLowerCase();
-            if (t.includes('무급')) return 0; 
-            if (t.includes('잔여')) return 3 / 8; // 잔여가 먼저 체크되도록
-            if (t.includes('반차')) return 5 / 8; 
-            return 1; 
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const saved = safeStorage.get('leavepass_user');
@@ -543,28 +540,51 @@
                 const d = JSON.parse(saved); state.currentUser = d.user; state.requests = d.requests || [];
                 document.getElementById('auth-section').classList.add('hidden'); document.getElementById('main-section').classList.remove('hidden');
                 const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
-                document.getElementById('welcome-msg').innerText = `안녕하세요 ${state.currentUser.role.includes('admin') ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP_LOCAL[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
-                renderDashboard(); refreshData(false);
+                document.getElementById('welcome-msg').innerText = `안녕하세요 ${String(state.currentUser.role).includes('admin') ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP_LOCAL[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
+                renderDashboard(); renderCalendar();
             } else document.getElementById('auth-section').classList.remove('hidden'), renderCalendar();
 
             document.getElementById('login-form').onsubmit = async (e) => {
                 e.preventDefault();
-                const res = await apiCall('login', { id: document.getElementById('login-id').value, pw: document.getElementById('login-pw').value });
+                const res = await apiCall('login', { id: document.getElementById('login-id').value, pw: document.getElementById('login-pw').value }, true);
                 if (res) { state.currentUser = res.user; state.requests = res.requests; safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); location.reload(); }
             };
 
+            // 🚀 즉각 반응하는 신청 폼 로직 (Optimistic UI)
             document.getElementById('leave-request-form').onsubmit = async (e) => {
-                e.preventDefault(); const date = document.getElementById('leave-date').value; let type = document.getElementById('leave-type').value;
+                e.preventDefault(); 
+                const date = document.getElementById('leave-date').value; 
+                let type = document.getElementById('leave-type').value;
                 if (!document.getElementById('detail-container').classList.contains('hidden')) type = document.getElementById('leave-detail').value;
-                const res = await apiCall('requestLeave', { userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role, requestDate: formatDate(new Date()), leaveDate: date, type, reason: document.getElementById('leave-reason').value, handover: document.getElementById('leave-handover').value });
-                if (res) { showAlert('신청되었습니다.', 'success'); document.getElementById('leave-request-form').reset(); refreshData(true); }
+                
+                const btn = document.getElementById('submit-btn'); const originalText = btn.innerText;
+                btn.disabled = true; btn.innerText = "처리 중...";
+
+                const newReq = {
+                    id: 'temp-' + Date.now(), userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
+                    requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: document.getElementById('leave-reason').value, handover: document.getElementById('leave-handover').value,
+                    status: '대기'
+                };
+
+                // 로컬 즉시 반영
+                state.requests.unshift(newReq);
+                renderDashboard(); renderCalendar();
+
+                const res = await apiCall('requestLeave', newReq, false);
+                if (res) { 
+                    showAlert('신청되었습니다.', 'success'); document.getElementById('leave-request-form').reset(); 
+                    selectedDateStr = ''; updateDropdownsForDate(''); refreshData(false); 
+                } else {
+                    state.requests = state.requests.filter(r => r.id !== newReq.id); renderDashboard(); renderCalendar();
+                }
+                btn.disabled = false; btn.innerText = originalText;
             };
         });
 
-        async function refreshData(loader = true) {
+        async function refreshData(loader = false) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
-            if (res) { state.currentUser = res.user; state.requests = res.requests; renderDashboard(); }
+            if (res) { state.currentUser = res.user; state.requests = res.requests; renderDashboard(); renderCalendar(); }
         }
         function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
     </script>
