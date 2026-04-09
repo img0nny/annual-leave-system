@@ -24,10 +24,11 @@
 </head>
 <body class="min-h-screen">
 
-    <div id="loading" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center hidden backdrop-blur-sm">
-        <div class="flex flex-col items-center gap-4 bg-white/10 p-8 rounded-3xl">
-            <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
-            <p class="text-white font-bold text-sm">연결 중...</p>
+    <!-- 글로벌 로딩 오버레이 -->
+    <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
+        <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
+            <p class="text-white font-bold text-sm tracking-wide">데이터 처리 중...</p>
         </div>
     </div>
 
@@ -35,14 +36,14 @@
     <div id="alert-container" class="fixed top-4 right-0 left-0 sm:left-auto sm:right-4 z-[9999] flex flex-col items-center sm:items-end px-4 space-y-2 pointer-events-none"></div>
 
     <!-- 확인 모달 -->
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[9000] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl">
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[9000] flex items-center justify-center hidden p-4 transition-all duration-200">
+        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in">
             <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-check"></i></div>
             <h3 class="text-xl font-black text-slate-800 mb-2">요청을 처리할까요?</h3>
             <p class="text-sm text-slate-500 mb-8">내역이 즉시 반영됩니다.</p>
             <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 rounded-2xl font-black">취소</button>
-                <button id="confirm-action-btn" class="flex-1 bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black">확인</button>
+                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 rounded-2xl font-black hover:bg-slate-200 transition-colors">취소</button>
+                <button id="confirm-action-btn" class="flex-1 bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black transition-colors">확인</button>
             </div>
         </div>
     </div>
@@ -58,7 +59,31 @@
                 <form id="login-form" autocomplete="off" class="space-y-4">
                     <div class="form-row"><label class="label-text">아이디</label><input type="text" id="login-id" required class="input-field" placeholder="아이디"></div>
                     <div class="form-row"><label class="label-text">비밀번호</label><input type="password" id="login-pw" required class="input-field" placeholder="••••••••"></div>
-                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg">로그인</button>
+                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-colors">로그인</button>
+                    <p class="text-center text-xs sm:text-sm text-slate-500 mt-5 font-medium">
+                        계정이 없으신가요? <a href="#" onclick="toggleAuthMode(true)" class="text-blue-600 font-black hover:underline cursor-pointer">회원가입</a>
+                    </p>
+                </form>
+
+                <form id="register-form" class="w-full hidden space-y-4" autocomplete="off">
+                    <div class="form-row">
+                        <label class="label-text">소속 팀</label>
+                        <select id="reg-team" required class="input-field cursor-pointer font-bold">
+                            <option value="user">진료팀</option>
+                            <option value="desk">데스크팀</option>
+                        </select>
+                    </div>
+                    <div class="form-row"><label class="label-text">이름</label><input type="text" id="reg-name" required maxlength="5" class="input-field" placeholder="예: 홍길동"></div>
+                    <div class="form-row"><label class="label-text">생년월일</label><input type="text" id="reg-birth" required maxlength="10" class="input-field" placeholder="1990-01-01" oninput="autoHyphenDate(this)"></div>
+                    <div class="form-row"><label class="label-text">연락처</label><input type="tel" id="reg-phone" required maxlength="13" class="input-field" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)"></div>
+                    <div class="form-row"><label class="label-text">입사일</label><input type="text" id="reg-join" required maxlength="10" class="input-field" placeholder="2024-01-01" oninput="autoHyphenDate(this)"></div>
+                    <div class="form-row"><label class="label-text">아이디</label><input type="text" id="reg-id" required class="input-field" placeholder="영문/숫자" autocomplete="off"></div>
+                    <div class="form-row"><label class="label-text">비밀번호</label><input type="password" id="reg-pw" required class="input-field" placeholder="••••••••" autocomplete="new-password"></div>
+
+                    <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-2">가입 완료</button>
+                    <p class="text-center text-xs sm:text-sm text-slate-500 mt-5 font-medium">
+                        이미 계정이 있나요? <a href="#" onclick="toggleAuthMode(false)" class="text-blue-600 font-black hover:underline cursor-pointer">로그인</a>
+                    </p>
                 </form>
             </div>
         </div>
@@ -82,9 +107,9 @@
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-base sm:text-xl font-black text-slate-800 flex items-center gap-2"><i class="far fa-calendar-alt text-blue-500"></i> 일정 확인 및 선택</h3>
                     <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                        <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600"><i class="fas fa-chevron-left text-xs"></i></button>
+                        <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600 hover:text-blue-600 transition-colors"><i class="fas fa-chevron-left text-xs"></i></button>
                         <span id="calendar-month-year" class="font-black text-slate-700 w-24 sm:w-32 text-center text-sm sm:text-base"></span>
-                        <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600"><i class="fas fa-chevron-right text-xs"></i></button>
+                        <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600 hover:text-blue-600 transition-colors"><i class="fas fa-chevron-right text-xs"></i></button>
                     </div>
                 </div>
                 <div class="calendar-grid mb-2">
@@ -118,7 +143,7 @@
                             </div>
                             <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" required class="input-field" placeholder="사유 입력"></div>
                             <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 사항"></div>
-                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl">신청하기</button>
+                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl hover:bg-black transition-colors">신청하기</button>
                         </form>
                     </div>
                 </div>
@@ -241,6 +266,21 @@
             setTimeout(() => { div.classList.add('opacity-0'); setTimeout(() => div.remove(), 300); }, 3000);
         };
 
+        function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
+        function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
+        function calculateInitialLeave(joinDateStr) {
+            if (!joinDateStr) return 15;
+            const parts = joinDateStr.split('-'); if (parts.length !== 3) return 15;
+            const join = new Date(parts[0], parts[1] - 1, parts[2]), today = new Date();
+            let m = (today.getFullYear() - join.getFullYear()) * 12 - join.getMonth() + today.getMonth();
+            if (today.getDate() < join.getDate()) m--;
+            return m < 12 ? Math.max(0, m) : 15; 
+        }
+        function toggleAuthMode(isRegister) {
+            document.getElementById('login-form').classList.toggle('hidden', isRegister);
+            document.getElementById('register-form').classList.toggle('hidden', !isRegister);
+        }
+
         function renderCalendar() {
             const year = currentDate.getFullYear(), month = currentDate.getMonth();
             document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
@@ -295,7 +335,7 @@
         function updateDropdownsForDate(date, closed, pending) {
             const select = document.getElementById('leave-type'), btn = document.getElementById('submit-btn');
             select.innerHTML = ''; select.disabled = false; select.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold'; select.style.color = '#1d4ed8';
-            btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3'; btn.innerText = '신청하기';
+            btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3 hover:bg-black transition-colors'; btn.innerText = '신청하기';
             if (!date || closed || pending) {
                 select.add(new Option(closed || pending ? '정원 마감' : '↑ 일정을 선택하세요', ''));
                 select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed'; select.style.color = '';
@@ -331,7 +371,7 @@
             } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
         }
 
-        // 🚀 즉각 렌더링 삭제 및 로딩 표시로 원복
+        // 🚀 즉시 반영 로직 제거 및 빠르고 명확한 로딩 처리
         async function updateStatus(id, status) {
             const res = await apiCall('updateStatus', { requestId: id, status }, true);
             if (res) { 
@@ -587,39 +627,38 @@
                 }
             };
 
-            // 🚀 즉각 반응하는 신청 폼 로직 (Optimistic UI)
+            // 🚀 즉각 반영(낙관적 UI) 제거: 전송 완료 전까지 서버 응답 대기, 로딩 UI 추가
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
                 let type = document.getElementById('leave-type').value;
                 if (!document.getElementById('detail-container').classList.contains('hidden')) type = document.getElementById('leave-detail').value;
                 
-                const btn = document.getElementById('submit-btn'); const originalText = btn.innerText;
-                btn.disabled = true; btn.innerText = "처리 중...";
-
-                // 🚀 관리자 신청 시 즉시 승인 로직 (프론트엔드 반영)
+                const btn = document.getElementById('submit-btn'); 
+                const originalText = btn.innerText;
+                
+                // 🚀 관리자 자동 승인 상태 판별 로직 추가
                 const isAdmin = String(state.currentUser.role).includes('admin');
                 const reqStatus = isAdmin ? '최종 승인' : '대기';
 
                 const newReq = {
                     userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
                     requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: document.getElementById('leave-reason').value, handover: document.getElementById('leave-handover').value,
-                    status: reqStatus
+                    status: reqStatus // 🚀 관리자면 대기가 아니라 '최종 승인'으로 서버에 쏜다.
                 };
 
-                // 🚀 낙관적 업데이트 제거, 로딩 창을 띄운 채 서버 전송
+                // 로딩 창 띄우고 API 직접 호출
                 const res = await apiCall('requestLeave', newReq, true);
                 if (res) { 
                     showAlert('신청되었습니다.', 'success'); 
                     document.getElementById('leave-request-form').reset(); 
                     selectedDateStr = ''; updateDropdownsForDate(''); 
-                    await refreshData(false); 
+                    await refreshData(false); // 서버 최신 상태 다시 불러와서 그려주기
                 }
-                btn.disabled = false; btn.innerText = originalText;
             };
         });
 
-        // 데이터 갱신 시 브라우저 캐시를 무조건 최신화
+        // 🚀 데이터 갱신 시 캐시 무조건 최신화
         async function refreshData(loader = false) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
