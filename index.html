@@ -28,7 +28,7 @@
     <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
         <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
-            <p class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
+            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
         </div>
     </div>
 
@@ -116,6 +116,14 @@
                     <div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">일</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">월</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">화</div><div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">수</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">목</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">금</div><div class="text-center font-bold text-[10px] sm:text-xs text-blue-400 py-1">토</div>
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
+
+                <!-- 캘린더 하단에 별도로 표시되는 날짜별 신청 내역 요약 -->
+                <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+                    <h4 class="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
+                        <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
+                    </h4>
+                    <div id="date-summary-list" class="flex flex-col"></div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -161,7 +169,7 @@
                         <div class="overflow-x-auto sm:overflow-visible">
                             <table class="w-full text-left sm:min-w-[450px]">
                                 <thead class="hidden sm:table-header-group border-b border-slate-100">
-                                    <tr class="bg-slate-50/80">
+                                    <tr class="bg-slate-50/80">ㄴ
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차일정 / 신청일</th>
                                         <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차유형 / 상세사유</th>
                                         <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
@@ -304,56 +312,28 @@
                 let approved = 0, pending = 0;
                 if (state.currentUser) {
                     const isAdmin = String(state.currentUser.role).includes('admin');
-                    // 🚀 수정됨: 일반 사원도 관리자가 쓴 연차를 마감으로 인식하도록 조건 수정
+                    // 🚀 일반 사원도 관리자가 쓴 연차를 마감으로 인식하도록 조건 수정
                     const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => String(r.userRole) === String(state.currentUser.role) || String(r.userRole).includes('admin'));
                     approved = targetReqs.filter(r => String(r.status).includes('승인')).length;
                     pending = targetReqs.filter(r => String(r.status) === '대기').length;
                 }
 
                 const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
-                // 🚀 수정됨: 달력 셀이 목록을 품을 수 있도록 레이아웃 재조정 (min-h 늘림)
-                cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start transition-all min-h-[75px] sm:min-h-[90px] relative overflow-hidden bg-white hover:border-blue-300 cursor-pointer`;
-                if (isClosed) cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start min-h-[75px] sm:min-h-[90px] bg-slate-50 opacity-60 cursor-not-allowed`;
+                // 🚀 모바일에서 글자가 잘리지 않도록 달력 셀 크기를 원상복구
+                cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] cursor-pointer bg-white hover:border-blue-300`;
+                if (isClosed) cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center min-h-[60px] sm:min-h-[75px] bg-slate-50 opacity-60 cursor-not-allowed`;
                 else if (isPast) cell.classList.add('bg-slate-50', 'text-slate-400');
                 if (dateStr === selectedDateStr) cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
 
-                // 상단 날짜 및 상태 뱃지 영역
-                const topRow = document.createElement('div');
-                topRow.className = 'w-full flex justify-between items-start mb-1';
-
-                const dateNum = document.createElement('span');
-                dateNum.className = `text-[11px] sm:text-[13px] font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
-                dateNum.innerText = i;
-                topRow.appendChild(dateNum);
-
+                cell.innerHTML = `<span class="text-[12px] sm:text-sm font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}">${i}</span>`;
                 const badge = document.createElement('span');
-                badge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md text-center max-w-[60%] truncate `;
+                badge.className = `mt-1 text-[8px] sm:text-[10px] font-black px-1 py-0.5 rounded-md w-full text-center `;
                 if (isPast) badge.innerText = '마감', badge.className += 'bg-slate-100 text-slate-400';
                 else if (isClosed) badge.innerText = '휴무', badge.className += 'bg-rose-50 text-rose-500';
                 else if (approved >= 1) badge.innerText = '연차마감', badge.className += 'bg-red-50 text-red-600';
                 else if (pending >= 1) badge.innerText = '승인중', badge.className += 'bg-yellow-50 text-yellow-600';
                 else badge.innerText = '가능', badge.className += 'bg-emerald-50 text-emerald-500';
-                topRow.appendChild(badge);
-                cell.appendChild(topRow);
-
-                // 🚀 복구됨: 캘린더 내부 신청자 목록 렌더링 로직 추가
-                const reqList = document.createElement('div');
-                reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[50px]';
-                allDayReqs.forEach(req => {
-                    const reqItem = document.createElement('div');
-                    const colorClass = String(req.status).includes('승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
-                    
-                    let shortType = String(req.type);
-                    if(shortType.includes('일반 연차')) shortType = '연차';
-                    else if(shortType.includes('무급 휴가')) shortType = '무급';
-                    else if(shortType.includes('반차')) shortType = '반차';
-                    else if(shortType.includes('잔여')) shortType = '잔여';
-
-                    reqItem.className = `text-[9px] sm:text-[10px] px-1 py-0.5 rounded truncate w-full font-bold text-left ${colorClass}`;
-                    reqItem.innerText = `${req.userName}(${shortType})`;
-                    reqList.appendChild(reqItem);
-                });
-                cell.appendChild(reqList);
+                cell.appendChild(badge);
 
                 if (!isClosed) {
                     cell.onclick = () => {
@@ -366,7 +346,7 @@
                 grid.appendChild(cell);
             }
             
-            // 선택된 날짜에 대한 하단 요약 목록 표시 로직
+            // 🚀 선택된 날짜에 대한 하단 요약 목록 표시 로직
             if (selectedDateStr) {
                 const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && String(r.status) !== '반려');
                 renderDateSummary(selectedDateStr, allDayRequests);
@@ -374,6 +354,17 @@
                 const summaryContainer = document.getElementById('date-summary-container');
                 if (summaryContainer) summaryContainer.classList.add('hidden');
             }
+        }
+        
+        function renderDateSummary(date, reqs) {
+            const list = document.getElementById('date-summary-list'); document.getElementById('summary-date-text').innerText = date; list.innerHTML = '';
+            if (!reqs.length) list.innerHTML = '<div class="text-[11px] text-slate-400 font-bold p-3 text-center">신청 내역이 없습니다.</div>';
+            else reqs.forEach(req => {
+                const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
+                const roleName = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' }[req.userRole] || req.userRole;
+                list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${roleName}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
+            });
+            document.getElementById('date-summary-container').classList.remove('hidden');
         }
 
         function updateDropdownsForDate(date, closed, pending) {
@@ -405,14 +396,23 @@
             }
         }
 
-        async function apiCall(action, data = {}, loader = false) {
-            if (loader) document.getElementById('loading').classList.remove('hidden');
+        async function apiCall(action, data = {}, loaderText = false) {
+            if (loaderText) {
+                const textEl = document.getElementById('loading-text');
+                if (textEl) textEl.innerText = typeof loaderText === 'string' ? loaderText : '데이터 처리 중...';
+                document.getElementById('loading').classList.remove('hidden');
+            }
             try {
                 const res = await fetch(GAS_WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
                 const json = await res.json();
                 if (json.status === 'error') throw new Error(json.message);
                 return json;
-            } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
+            } catch (e) { 
+                showAlert(`오류: ${e.message}`, 'error'); 
+                return null; 
+            } finally { 
+                if (loaderText) document.getElementById('loading').classList.add('hidden'); 
+            }
         }
 
         // 🚀 즉각 반응 및 부드러운 상태 처리 (Optimistic UI)
@@ -654,9 +654,10 @@
                 renderDashboard(); renderCalendar();
             } else document.getElementById('auth-section').classList.remove('hidden'), renderCalendar();
 
+            // 🚀 로그인 로딩 멘트 변경
             document.getElementById('login-form').onsubmit = async (e) => {
                 e.preventDefault();
-                const res = await apiCall('login', { id: document.getElementById('login-id').value, pw: document.getElementById('login-pw').value }, true);
+                const res = await apiCall('login', { id: document.getElementById('login-id').value, pw: document.getElementById('login-pw').value }, '로그인 중...');
                 if (res) { state.currentUser = res.user; state.requests = res.requests; safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); location.reload(); }
             };
 
