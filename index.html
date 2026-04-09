@@ -331,18 +331,21 @@
             } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
         }
 
-        // 성능 최적화: 즉각적인 UI 반영 및 캐시 갱신
+        // 🚀 즉각 렌더링 삭제 및 로딩 표시로 원복
         async function updateStatus(id, status) {
-            const idx = state.requests.findIndex(r => String(r.id) === String(id)); if (idx === -1) return;
-            const old = state.requests[idx].status; state.requests[idx].status = status; renderDashboard(); renderCalendar();
-            const res = await apiCall('updateStatus', { requestId: id, status }, false);
-            if (!res) { state.requests[idx].status = old; renderDashboard(); renderCalendar(); } else { showAlert('반영 완료', 'success'); refreshData(false); }
+            const res = await apiCall('updateStatus', { requestId: id, status }, true);
+            if (res) { 
+                showAlert('반영 완료', 'success'); 
+                await refreshData(false); 
+            }
         }
 
         async function performDelete(id) {
-            const original = [...state.requests]; state.requests = state.requests.filter(r => String(r.id) !== String(id)); renderDashboard(); renderCalendar();
-            const res = await apiCall('deleteRequest', { requestId: id }, false);
-            if (!res) { state.requests = original; renderDashboard(); renderCalendar(); } else { showAlert('삭제/취소 완료', 'success'); refreshData(false); }
+            const res = await apiCall('deleteRequest', { requestId: id }, true);
+            if (res) { 
+                showAlert('삭제/취소 완료', 'success'); 
+                await refreshData(false); 
+            }
         }
 
         function getDeductionDaysLocally(type) {
@@ -540,6 +543,7 @@
                     });
                 }
             }
+            renderCalendar();
         }
 
         window.openConfirmAction = function(id, action) { deleteTargetId = id; document.getElementById('confirm-modal').classList.remove('hidden'); };
@@ -562,7 +566,28 @@
                 if (res) { state.currentUser = res.user; state.requests = res.requests; safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); location.reload(); }
             };
 
-            // 즉각 반응하는 신청 폼 로직 (Optimistic UI)
+            document.getElementById('register-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const joinDateValue = document.getElementById('reg-join').value;
+                const initialTotalLeave = calculateInitialLeave(joinDateValue);
+                const res = await apiCall('register', {
+                    name: document.getElementById('reg-name').value,
+                    birth: document.getElementById('reg-birth').value,
+                    phone: document.getElementById('reg-phone').value,
+                    joinDate: joinDateValue,
+                    id: document.getElementById('reg-id').value,
+                    pw: document.getElementById('reg-pw').value,
+                    role: document.getElementById('reg-team').value,
+                    totalLeave: initialTotalLeave
+                }, true);
+                if (res) {
+                    showAlert('가입이 완료되었습니다. 로그인해주세요!', 'success');
+                    toggleAuthMode(false);
+                    document.getElementById('register-form').reset();
+                }
+            };
+
+            // 🚀 즉각 반응하는 신청 폼 로직 (Optimistic UI)
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -572,29 +597,29 @@
                 const btn = document.getElementById('submit-btn'); const originalText = btn.innerText;
                 btn.disabled = true; btn.innerText = "처리 중...";
 
+                // 🚀 관리자 신청 시 즉시 승인 로직 (프론트엔드 반영)
+                const isAdmin = String(state.currentUser.role).includes('admin');
+                const reqStatus = isAdmin ? '최종 승인' : '대기';
+
                 const newReq = {
-                    id: 'temp-' + Date.now(), userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
+                    userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
                     requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: document.getElementById('leave-reason').value, handover: document.getElementById('leave-handover').value,
-                    status: '대기'
+                    status: reqStatus
                 };
 
-                // 로컬 즉시 반영
-                state.requests = state.requests || [];
-                state.requests.unshift(newReq);
-                renderDashboard(); renderCalendar();
-
-                const res = await apiCall('requestLeave', newReq, false);
+                // 🚀 낙관적 업데이트 제거, 로딩 창을 띄운 채 서버 전송
+                const res = await apiCall('requestLeave', newReq, true);
                 if (res) { 
-                    showAlert('신청되었습니다.', 'success'); document.getElementById('leave-request-form').reset(); 
-                    selectedDateStr = ''; updateDropdownsForDate(''); refreshData(false); 
-                } else {
-                    state.requests = state.requests.filter(r => r.id !== newReq.id); renderDashboard(); renderCalendar();
+                    showAlert('신청되었습니다.', 'success'); 
+                    document.getElementById('leave-request-form').reset(); 
+                    selectedDateStr = ''; updateDropdownsForDate(''); 
+                    await refreshData(false); 
                 }
                 btn.disabled = false; btn.innerText = originalText;
             };
         });
 
-        // 🚀 핵심: 데이터 갱신 시 브라우저 캐시(SessionStorage)를 무조건 최신화하여 새로고침 시 이력 부활 방지
+        // 데이터 갱신 시 브라우저 캐시를 무조건 최신화
         async function refreshData(loader = false) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
@@ -602,10 +627,8 @@
                 state.currentUser = res.user; 
                 state.requests = res.requests; 
                 if (res.allUsers) state.allUsers = res.allUsers;
-                // 세션스토리지 최신화 
                 safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
                 renderDashboard(); 
-                renderCalendar(); 
             }
         }
         function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
