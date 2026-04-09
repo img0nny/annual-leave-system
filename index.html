@@ -229,7 +229,6 @@
 
     <script>
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8MMIq0F6g/exec"; 
-        
         let state = { currentUser: null, requests: [], allUsers: [] };
         let currentDate = new Date(), selectedDateStr = '', deleteTargetId = null;
         const ROLE_MAP = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
@@ -331,7 +330,6 @@
                 }
 
                 const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
-                
                 cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start transition-all min-h-[80px] sm:min-h-[100px] relative overflow-hidden bg-white hover:border-blue-300 cursor-pointer`;
                 if (isClosed) cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start min-h-[80px] sm:min-h-[100px] bg-slate-50 opacity-60 cursor-not-allowed`;
                 else if (isPast) cell.classList.add('bg-slate-50', 'text-slate-400');
@@ -355,7 +353,6 @@
                 topRow.appendChild(badge);
                 cell.appendChild(topRow);
 
-                // 🚀 달력 내 텍스트 잘림 해결을 위해 1글자 축약 로직 반영
                 const reqList = document.createElement('div');
                 reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
                 allDayReqs.forEach(req => {
@@ -365,7 +362,7 @@
                     let shortType = String(req.type);
                     if(shortType.includes('일반 연차')) shortType = '연';
                     else if(shortType.includes('무급 휴가')) shortType = '무';
-                    else if(shortType.includes('잔여')) shortType = '잔'; // 잔여 우선 처리
+                    else if(shortType.includes('잔여')) shortType = '잔'; 
                     else if(shortType.includes('반차')) shortType = '반';
 
                     reqItem.className = `text-[9px] sm:text-[10px] px-1 py-1 rounded w-full font-bold text-center leading-tight break-keep whitespace-normal ${colorClass}`;
@@ -459,19 +456,33 @@
             }
         }
 
+        // 🚀 서버에 100% 반영된 후에 UI를 업데이트하는 로직으로 완전히 교체 (승인 시)
         async function updateStatus(id, status) {
-            const res = await apiCall('updateStatus', { requestId: id, status }, '상태 변경 중...');
-            if (res) { 
-                showAlert('변경완료됨', 'success'); 
-                setTimeout(() => { refreshData(false); }, 5000); 
+            document.getElementById('loading-text').innerText = '상태 변경 중...';
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await apiCall('updateStatus', { requestId: id, status }, false);
+                if (res) { 
+                    await refreshData(false); 
+                    showAlert('상태가 변경되었습니다.', 'success'); 
+                }
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
+        // 🚀 서버에 100% 반영된 후에 UI를 업데이트하는 로직으로 완전히 교체 (삭제 시)
         async function performDelete(id) {
-            const res = await apiCall('deleteRequest', { requestId: id }, '연차 삭제 중...');
-            if (res) { 
-                showAlert('삭제/취소 완료', 'success'); 
-                setTimeout(() => { refreshData(false); }, 5000); 
+            document.getElementById('loading-text').innerText = '연차 삭제 중...';
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await apiCall('deleteRequest', { requestId: id }, false);
+                if (res) { 
+                    await refreshData(false); 
+                    showAlert('삭제/취소가 완료되었습니다.', 'success'); 
+                }
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
@@ -765,7 +776,7 @@
                 btn.disabled = false;
             };
 
-            // 🚀 연차 잔여량 방어 로직 추가
+            // 🚀 서버에 먼저 100% 저장 완료된 후 내역 표기 (로딩 오버레이 띄움)
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -779,7 +790,7 @@
                 if(!reasonVal) return showAlert('연차 사유를 입력해주세요.', 'error');
                 if(!handoverVal) return showAlert('인수인계를 입력해주세요.', 'error');
 
-                // 🚀 잔여 연차 계산 로직 (대기/승인 중인 모든 내역을 합산해 차감 여부 검증)
+                // 잔여 연차 계산 로직
                 let totalDecimal = parseLeaveString(state.currentUser.total);
                 let usedDecimal = parseLeaveString(state.currentUser.used);
                 state.requests.forEach(r => {
@@ -790,7 +801,6 @@
                 let remainingLeave = totalDecimal - usedDecimal;
                 const deductionAmount = getDeductionDaysLocally(type);
 
-                // 무급 휴가(차감 0)는 잔여량 검증에서 패스하고, 나머지는 잔여량 부족 시 신청 방어
                 if (deductionAmount > 0 && deductionAmount > remainingLeave) {
                     return showAlert('잔여 연차 일수 및 시간이 부족합니다.', 'error');
                 }
@@ -807,12 +817,19 @@
                     deductionText: deductionTextAmount
                 };
 
-                const res = await apiCall('requestLeave', newReq, '연차 신청 중...');
-                if (res) { 
-                    showAlert('신청되었습니다.', 'success'); 
-                    document.getElementById('leave-request-form').reset(); 
-                    selectedDateStr = ''; updateDropdownsForDate(''); 
-                    await refreshData(false); 
+                // 로딩 창을 띄우며 백엔드로 전송하고 완료될 때까지 대기
+                document.getElementById('loading-text').innerText = '연차 신청 중...';
+                document.getElementById('loading').classList.remove('hidden');
+                try {
+                    const res = await apiCall('requestLeave', newReq, false);
+                    if (res) { 
+                        document.getElementById('leave-request-form').reset(); 
+                        selectedDateStr = ''; updateDropdownsForDate(''); 
+                        await refreshData(false); // 서버 최신 상태 다시 불러와서 내역 표기
+                        showAlert('신청되었습니다.', 'success'); 
+                    }
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
                 }
             };
         });
@@ -838,6 +855,7 @@
                 if (res.allUsers) state.allUsers = res.allUsers;
                 safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
                 renderDashboard(); 
+                renderCalendar(); // 캘린더도 즉각 갱신
             }
             
             if (isBtn) {
