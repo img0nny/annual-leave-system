@@ -253,7 +253,7 @@
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
                       dayOfWeek = new Date(year, month, i).getDay();
                       
-                // 🚀 안전한 문자열 치환 비교로 에러 원천 차단
+                // 안전한 문자열 치환 비교로 에러 원천 차단
                 const allDayReqs = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && String(r.status) !== '반려');
                 
                 let approved = 0, pending = 0;
@@ -331,17 +331,18 @@
             } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
         }
 
+        // 성능 최적화: 즉각적인 UI 반영 및 캐시 갱신
         async function updateStatus(id, status) {
             const idx = state.requests.findIndex(r => String(r.id) === String(id)); if (idx === -1) return;
             const old = state.requests[idx].status; state.requests[idx].status = status; renderDashboard(); renderCalendar();
             const res = await apiCall('updateStatus', { requestId: id, status }, false);
-            if (!res) { state.requests[idx].status = old; renderDashboard(); renderCalendar(); } else showAlert('반영 완료', 'success');
+            if (!res) { state.requests[idx].status = old; renderDashboard(); renderCalendar(); } else { showAlert('반영 완료', 'success'); refreshData(false); }
         }
 
         async function performDelete(id) {
             const original = [...state.requests]; state.requests = state.requests.filter(r => String(r.id) !== String(id)); renderDashboard(); renderCalendar();
             const res = await apiCall('deleteRequest', { requestId: id }, false);
-            if (!res) { state.requests = original; renderDashboard(); renderCalendar(); } else showAlert('삭제/취소 완료', 'success');
+            if (!res) { state.requests = original; renderDashboard(); renderCalendar(); } else { showAlert('삭제/취소 완료', 'success'); refreshData(false); }
         }
 
         function getDeductionDaysLocally(type) {
@@ -356,7 +357,7 @@
             const u = state.currentUser; if (!u) return;
             const isAdmin = String(u.role).includes('admin');
             
-            // 🚀 핵심 수정 구역: 권한에 따른 관리자/일반 패널 스위칭(토글) 100% 복구
+            // 권한에 따른 패널 스위칭
             if(isAdmin) {
                 document.getElementById('user-history').classList.add('hidden');
                 document.getElementById('admin-panel').classList.remove('hidden');
@@ -365,7 +366,6 @@
                 document.getElementById('admin-panel').classList.add('hidden');
             }
 
-            // 배열 안전망
             state.requests = state.requests || [];
             
             let used = parseFloat(u.used) || 0;
@@ -562,7 +562,7 @@
                 if (res) { state.currentUser = res.user; state.requests = res.requests; safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); location.reload(); }
             };
 
-            // 🚀 즉각 반응하는 신청 폼 로직 (Optimistic UI)
+            // 즉각 반응하는 신청 폼 로직 (Optimistic UI)
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -594,10 +594,19 @@
             };
         });
 
+        // 🚀 핵심: 데이터 갱신 시 브라우저 캐시(SessionStorage)를 무조건 최신화하여 새로고침 시 이력 부활 방지
         async function refreshData(loader = false) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
-            if (res) { state.currentUser = res.user; state.requests = res.requests; renderDashboard(); renderCalendar(); }
+            if (res) { 
+                state.currentUser = res.user; 
+                state.requests = res.requests; 
+                if (res.allUsers) state.allUsers = res.allUsers;
+                // 세션스토리지 최신화 
+                safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
+                renderDashboard(); 
+                renderCalendar(); 
+            }
         }
         function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
     </script>
