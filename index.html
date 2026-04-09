@@ -24,11 +24,11 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 글로벌 로딩 오버레이 (즉각 반영 삭제 후 안정적인 로딩 표시) -->
+    <!-- 글로벌 로딩 오버레이 (단순 접속/새로고침 시에만 사용) -->
     <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
         <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
-            <p class="text-white font-bold text-sm tracking-wide">데이터 처리 중...</p>
+            <p class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
         </div>
     </div>
 
@@ -40,7 +40,7 @@
         <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in">
             <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-check"></i></div>
             <h3 class="text-xl font-black text-slate-800 mb-2">요청을 처리할까요?</h3>
-            <p class="text-sm text-slate-500 mb-8">내역이 시트에 즉시 반영됩니다.</p>
+            <p class="text-sm text-slate-500 mb-8">내역이 즉시 반영됩니다.</p>
             <div class="flex gap-3">
                 <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 rounded-2xl font-black hover:bg-slate-200 transition-colors">취소</button>
                 <button id="confirm-action-btn" class="flex-1 bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black transition-colors">확인</button>
@@ -143,7 +143,10 @@
                             </div>
                             <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" required class="input-field" placeholder="사유 입력"></div>
                             <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" required class="input-field" placeholder="인수자 및 사항"></div>
-                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl hover:bg-black transition-colors">신청하기</button>
+                            <!-- 신청 버튼 (즉각 반응 UI) -->
+                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl hover:bg-black transition-colors flex items-center justify-center">
+                                신청하기
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -301,7 +304,8 @@
                 let approved = 0, pending = 0;
                 if (state.currentUser) {
                     const isAdmin = String(state.currentUser.role).includes('admin');
-                    const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => String(r.userRole) === String(state.currentUser.role));
+                    // 🚀 수정됨: 일반 사원도 관리자가 쓴 연차를 마감으로 인식하도록 조건 추가
+                    const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => String(r.userRole) === String(state.currentUser.role) || String(r.userRole).includes('admin'));
                     approved = targetReqs.filter(r => String(r.status).includes('승인')).length;
                     pending = targetReqs.filter(r => String(r.status) === '대기').length;
                 }
@@ -332,16 +336,25 @@
                 }
                 grid.appendChild(cell);
             }
+            
+            // 🚀 복구됨: 선택된 날짜에 대한 하단 요약 목록 표시 로직
+            if (selectedDateStr) {
+                const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && String(r.status) !== '반려');
+                renderDateSummary(selectedDateStr, allDayRequests);
+            } else {
+                const summaryContainer = document.getElementById('date-summary-container');
+                if (summaryContainer) summaryContainer.classList.add('hidden');
+            }
         }
 
         function updateDropdownsForDate(date, closed, pending) {
             const select = document.getElementById('leave-type'), btn = document.getElementById('submit-btn');
             select.innerHTML = ''; select.disabled = false; select.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold'; select.style.color = '#1d4ed8';
-            btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3 hover:bg-black transition-colors'; btn.innerText = '신청하기';
+            btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3 hover:bg-black transition-colors'; btn.innerHTML = '신청하기';
             if (!date || closed || pending) {
                 select.add(new Option(closed || pending ? '정원 마감' : '↑ 일정을 선택하세요', ''));
                 select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed'; select.style.color = '';
-                btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3'; btn.innerText = '신청 불가';
+                btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3'; btn.innerHTML = '신청 불가';
                 return;
             }
             const day = new Date(date).getDay();
@@ -373,20 +386,33 @@
             } catch (e) { showAlert(`오류: ${e.message}`, 'error'); return null; } finally { if (loader) document.getElementById('loading').classList.add('hidden'); }
         }
 
-        // 🚀 즉시 반영 로직 제거 및 빠르고 명확한 로딩 처리
+        // 🚀 즉각 반응 및 부드러운 상태 처리 (Optimistic UI)
         async function updateStatus(id, status) {
-            const res = await apiCall('updateStatus', { requestId: id, status }, true);
-            if (res) { 
+            const idx = state.requests.findIndex(r => String(r.id) === String(id)); if (idx === -1) return;
+            const old = state.requests[idx].status; 
+            state.requests[idx].status = status; 
+            renderDashboard(); renderCalendar();
+            
+            const res = await apiCall('updateStatus', { requestId: id, status }, false);
+            if (!res) { 
+                state.requests[idx].status = old; renderDashboard(); renderCalendar(); 
+            } else { 
                 showAlert('반영 완료', 'success'); 
-                await refreshData(false); 
+                refreshData(false); // 완료 후 캐시 동기화
             }
         }
 
         async function performDelete(id) {
-            const res = await apiCall('deleteRequest', { requestId: id }, true);
-            if (res) { 
+            const original = [...state.requests]; 
+            state.requests = state.requests.filter(r => String(r.id) !== String(id)); 
+            renderDashboard(); renderCalendar();
+            
+            const res = await apiCall('deleteRequest', { requestId: id }, false);
+            if (!res) { 
+                state.requests = original; renderDashboard(); renderCalendar(); 
+            } else { 
                 showAlert('삭제/취소 완료', 'success'); 
-                await refreshData(false); 
+                refreshData(false); // 완료 후 캐시 동기화
             }
         }
 
@@ -402,7 +428,6 @@
             const u = state.currentUser; if (!u) return;
             const isAdmin = String(u.role).includes('admin');
             
-            // 권한에 따른 패널 스위칭
             if(isAdmin) {
                 document.getElementById('user-history').classList.add('hidden');
                 document.getElementById('admin-panel').classList.remove('hidden');
@@ -420,7 +445,6 @@
 
             const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
-            // 일반 사원 패널 
             if (!isAdmin) {
                 const body = document.getElementById('history-body'); body.innerHTML = '';
                 const filtered = state.requests.filter(r => String(r.userId) === String(u.id));
@@ -481,7 +505,6 @@
                 }
             }
             
-            // 관리자 패널 
             if (isAdmin) {
                 const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
                 const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
@@ -629,7 +652,7 @@
                 }
             };
 
-            // 🚀 즉각 반영(낙관적 UI) 제거: 전송 완료 전까지 서버 응답 대기, 로딩 UI 확실한 추가
+            // 🚀 빠르고 부드러운 낙관적 UI 적용 및 버튼 로딩 스피너
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -639,28 +662,43 @@
                 const btn = document.getElementById('submit-btn'); 
                 const originalText = btn.innerText;
                 
-                // 🚀 관리자 자동 승인 상태 판별 로직
+                // 🚀 버튼에만 로딩 표시하여 체감 속도 상승
+                btn.disabled = true; 
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>처리 중...';
+
                 const isAdmin = String(state.currentUser.role).includes('admin');
                 const reqStatus = isAdmin ? '최종 승인' : '대기';
 
                 const newReq = {
+                    id: 'temp-' + Date.now(),
                     userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
                     requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: document.getElementById('leave-reason').value, handover: document.getElementById('leave-handover').value,
-                    status: reqStatus // 🚀 관리자면 대기가 아니라 '최종 승인'으로 서버에 전송
+                    status: reqStatus 
                 };
 
-                // 로딩 창 띄우고 API 직접 호출 후 기다림 (즉각 반영 X)
-                const res = await apiCall('requestLeave', newReq, true);
+                // 🚀 화면 0.1초 즉시 렌더링 (Optimistic Update)
+                state.requests.unshift(newReq);
+                document.getElementById('leave-request-form').reset(); 
+                selectedDateStr = ''; updateDropdownsForDate(''); 
+                renderDashboard(); renderCalendar();
+
+                // 서버 전송 (백그라운드 통신)
+                const res = await apiCall('requestLeave', newReq, false);
                 if (res) { 
                     showAlert('신청되었습니다.', 'success'); 
-                    document.getElementById('leave-request-form').reset(); 
-                    selectedDateStr = ''; updateDropdownsForDate(''); 
-                    await refreshData(false); // 서버 최신 상태 다시 불러와서 캐시 덮어쓰기
+                    refreshData(false); // 서버 통신 완료 후 최신화
+                } else {
+                    // 전송 실패 시 임시 데이터 삭제 후 원복
+                    state.requests = state.requests.filter(r => r.id !== newReq.id);
+                    renderDashboard(); renderCalendar();
                 }
+                
+                btn.disabled = false; 
+                btn.innerHTML = originalText;
             };
         });
 
-        // 🚀 데이터 갱신 시 캐시 무조건 최신화 (새로고침 버그 완벽 방어)
+        // 🚀 캐시를 무조건 최신화하여 새로고침 시 삭제 내역 부활 방지
         async function refreshData(loader = false) {
             if (!state.currentUser) return;
             const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, loader);
