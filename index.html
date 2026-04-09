@@ -731,21 +731,35 @@
 
                 const isAdmin = String(state.currentUser.role).includes('admin');
                 const reqStatus = isAdmin ? '최종 승인' : '대기';
+                
+                // 🚀 백엔드로 정확한 시간제 차감값을 전달하기 위해 추가된 로직
+                const deductionAmount = getDeductionDaysLocally(type);
 
                 const newReq = {
                     id: 'temp-' + Date.now(),
                     userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
                     requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: reasonVal, handover: handoverVal,
-                    status: reqStatus 
+                    status: reqStatus,
+                    deduction: deductionAmount // 시간제 차감값(예: 0.375)을 서버로 전송
                 };
 
-                const res = await apiCall('requestLeave', newReq, false); // 버튼 로딩 처리이므로 전역 오버레이는 표시 안 함
+                // 화면 0.1초 즉시 렌더링 (Optimistic Update)
+                state.requests = state.requests || [];
+                state.requests.unshift(newReq);
+                document.getElementById('leave-request-form').reset(); 
+                selectedDateStr = ''; updateDropdownsForDate(''); 
+                renderDashboard(); renderCalendar();
+
+                // 서버 전송 (백그라운드 통신)
+                const res = await apiCall('requestLeave', newReq, false);
                 if (res) { 
                     showAlert('신청되었습니다.', 'success'); 
-                    document.getElementById('leave-request-form').reset(); 
-                    selectedDateStr = ''; updateDropdownsForDate(''); 
-                    await refreshData(false); // 서버 최신 상태 다시 불러와서 캐시 덮어쓰기
+                    refreshData(false); 
+                } else {
+                    state.requests = state.requests.filter(r => r.id !== newReq.id);
+                    renderDashboard(); renderCalendar();
                 }
+                
                 btn.disabled = false; 
                 btn.innerHTML = originalText;
             };
