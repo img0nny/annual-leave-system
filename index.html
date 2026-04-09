@@ -24,11 +24,11 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 글로벌 로딩 오버레이 (신청/삭제/승인 등 시트 반영 시 사용) -->
+    <!-- 글로벌 로딩 오버레이 (작업 전체 완료 시까지 유지) -->
     <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
         <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
-            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 처리 중...</p>
+            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
         </div>
     </div>
 
@@ -249,26 +249,6 @@
             location.href = location.href.split('#')[0];
         };
 
-        function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
-        function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
-        
-        function calculateLegalLeave(joinDateStr) {
-            if (!joinDateStr) return 15;
-            const parts = joinDateStr.split('-'); if (parts.length !== 3) return 15;
-            const join = new Date(parts[0], parts[1] - 1, parts[2]), today = new Date();
-            
-            let m = (today.getFullYear() - join.getFullYear()) * 12 - join.getMonth() + today.getMonth();
-            if (today.getDate() < join.getDate()) m--;
-            
-            if (m < 0) return 0;
-            if (m < 12) return m; 
-            
-            const years = Math.floor(m / 12);
-            let extra = Math.floor((years - 1) / 2); 
-            if (extra < 0) extra = 0;
-            return Math.min(15 + extra, 25); 
-        }
-
         const formatDate = (s) => {
             if (!s) return "-";
             const d = new Date(s);
@@ -309,6 +289,26 @@
             container.appendChild(div);
             setTimeout(() => { div.classList.add('opacity-0'); setTimeout(() => div.remove(), 300); }, 3000);
         };
+
+        function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
+        function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
+        
+        function calculateLegalLeave(joinDateStr) {
+            if (!joinDateStr) return 15;
+            const parts = joinDateStr.split('-'); if (parts.length !== 3) return 15;
+            const join = new Date(parts[0], parts[1] - 1, parts[2]), today = new Date();
+            
+            let m = (today.getFullYear() - join.getFullYear()) * 12 - join.getMonth() + today.getMonth();
+            if (today.getDate() < join.getDate()) m--;
+            
+            if (m < 0) return 0;
+            if (m < 12) return m; 
+            
+            const years = Math.floor(m / 12);
+            let extra = Math.floor((years - 1) / 2); 
+            if (extra < 0) extra = 0;
+            return Math.min(15 + extra, 25); 
+        }
 
         function toggleAuthMode(isRegister) {
             document.getElementById('login-form').classList.toggle('hidden', isRegister);
@@ -361,6 +361,7 @@
                 topRow.appendChild(badge);
                 cell.appendChild(topRow);
 
+                // 🚀 모바일 텍스트 잘림 해결: 폰트 축소, 자간 좁힘, 단어 강제 줄바꿈 허용 설정
                 const reqList = document.createElement('div');
                 reqList.className = 'w-full flex flex-col gap-[2px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
                 allDayReqs.forEach(req => {
@@ -373,7 +374,8 @@
                     else if(shortType.includes('잔여')) shortType = '잔'; 
                     else if(shortType.includes('반차')) shortType = '반';
 
-                    reqItem.className = `text-[8px] sm:text-[9px] px-0.5 py-0.5 rounded w-full font-bold text-center leading-none tracking-tighter break-keep whitespace-normal ${colorClass}`;
+                    // 텍스트 줄바꿈 허용(break-all, whitespace-normal) 및 폰트 사이즈 최소화
+                    reqItem.className = `text-[8px] sm:text-[9px] px-0.5 py-0.5 rounded w-full font-bold text-center leading-none tracking-tighter break-all whitespace-normal ${colorClass}`;
                     reqItem.innerText = `${req.userName}(${shortType})`;
                     reqList.appendChild(reqItem);
                 });
@@ -464,21 +466,33 @@
             }
         }
 
-        // 🚀 변경사항: 상태 업데이트/승인 완료 후 화면 100% 동기화 갱신
+        // 🚀 변경 1: 승인 상태 변경 시, 로딩 창을 띄운 상태로 서버 반영 후 최신 데이터 동기화 완료 시 표기
         async function updateStatus(id, status) {
-            const res = await apiCall('updateStatus', { requestId: id, status }, '상태 변경 중...');
-            if (res) { 
-                showAlert('변경 완료', 'success'); 
-                await refreshData(false); 
+            document.getElementById('loading-text').innerText = '상태 변경 중...';
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await apiCall('updateStatus', { requestId: id, status }, false);
+                if (res) { 
+                    await refreshData(false); 
+                    showAlert('상태가 변경되었습니다.', 'success'); 
+                }
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
-        // 🚀 변경사항: 삭제/취소 완료 후 화면 100% 동기화 갱신
+        // 🚀 변경 2: 삭제 및 취소 시, 로딩 창을 띄운 상태로 서버 반영 후 최신 데이터 동기화 완료 시 표기
         async function performDelete(id) {
-            const res = await apiCall('deleteRequest', { requestId: id }, '연차 삭제 중...');
-            if (res) { 
-                showAlert('삭제/취소 완료', 'success'); 
-                await refreshData(false); 
+            document.getElementById('loading-text').innerText = '연차 삭제 중...';
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await apiCall('deleteRequest', { requestId: id }, false);
+                if (res) { 
+                    await refreshData(false); 
+                    showAlert('삭제/취소가 완료되었습니다.', 'success'); 
+                }
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
@@ -512,7 +526,6 @@
 
             state.requests = state.requests || [];
             
-            // 🚀 임시 계산 로직 완전히 제거, 시트 데이터(100% 신뢰) 그대로 사용
             let totalDecimal = parseLeaveString(u.total);
             let usedDecimal = parseLeaveString(u.used);
 
@@ -765,7 +778,7 @@
                 btn.disabled = false;
             };
 
-            // 🚀 신청 시 임시 렌더링 제거, 서버 저장 후 100% 동기화 갱신
+            // 🚀 변경 3: 연차 신청 시 로딩창 띄우고 서버 반영 완료된 후 화면 동기화
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -779,7 +792,7 @@
                 if(!reasonVal) return showAlert('연차 사유를 입력해주세요.', 'error');
                 if(!handoverVal) return showAlert('인수인계를 입력해주세요.', 'error');
 
-                // 잔여 연차 방어 (로컬 가짜합산 안함, 무조건 시트DB값 그대로 계산)
+                // 🚀 잔여 연차 방어 (현재 화면의 정확한 소수점 파싱 데이터를 활용)
                 let totalDecimal = parseLeaveString(state.currentUser.total);
                 let usedDecimal = parseLeaveString(state.currentUser.used);
                 let remainingLeave = totalDecimal - usedDecimal;
@@ -801,12 +814,19 @@
                     deductionText: deductionTextAmount
                 };
 
-                const res = await apiCall('requestLeave', newReq, '연차 신청 중...');
-                if (res) { 
-                    showAlert('신청되었습니다.', 'success'); 
-                    document.getElementById('leave-request-form').reset(); 
-                    selectedDateStr = ''; updateDropdownsForDate(''); 
-                    await refreshData(false); // 서버 최신 상태 다시 불러와서 내역 표기
+                // 로딩 창을 띄우며 백엔드로 전송하고, 시트에 저장이 끝날 때까지 대기합니다.
+                document.getElementById('loading-text').innerText = '연차 신청 중...';
+                document.getElementById('loading').classList.remove('hidden');
+                try {
+                    const res = await apiCall('requestLeave', newReq, false);
+                    if (res) { 
+                        document.getElementById('leave-request-form').reset(); 
+                        selectedDateStr = ''; updateDropdownsForDate(''); 
+                        await refreshData(false); // 서버 최신 상태 다시 불러와서 내역/달력 표기 (로딩창은 여기까지 유지됨)
+                        showAlert('신청되었습니다.', 'success'); 
+                    }
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
                 }
             };
         });
