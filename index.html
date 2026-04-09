@@ -117,10 +117,10 @@
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
 
-                <!-- 캘린더 하단 별도 요약 목록 -->
+                <!-- 해당 월 전체 신청 현황 요약 창 -->
                 <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
                     <h4 class="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                        <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
+                        <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 전체 신청 현황
                     </h4>
                     <div id="date-summary-list" class="flex flex-col"></div>
                 </div>
@@ -141,7 +141,7 @@
                         <form id="leave-request-form" class="space-y-3">
                             <div class="form-row"><label class="label-text">연차 일정</label><input type="date" id="leave-date" class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();"></div>
                             <div class="form-row"><label class="label-text">연차 유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50 text-blue-700 font-bold" style="color: #1d4ed8;">
+                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold" style="color: #1d4ed8;">
                                     <option value="" disabled selected>↑ 일정을 선택하세요</option>
                                 </select>
                             </div>
@@ -255,7 +255,6 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         };
 
-        // 🚀 정확한 시간/일 포맷팅 기능 유지
         const formatDaysHours = (days) => {
             if (!days) return "0일";
             const d = Math.floor(Math.abs(days)), h = Math.round((Math.abs(days) - d) * 8);
@@ -267,7 +266,6 @@
             return t;
         };
 
-        // 🚀 문자열 혼용 시트 데이터 완벽 파싱 함수 탑재
         function parseLeaveString(val) {
             if (val === undefined || val === null || val === '') return 0;
             if (typeof val === 'number') return val;
@@ -348,7 +346,7 @@
                 badge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md text-center max-w-[60%] truncate `;
                 if (isPast) badge.innerText = '마감', badge.className += 'bg-slate-100 text-slate-400';
                 else if (isClosed) badge.innerText = '휴무', badge.className += 'bg-rose-50 text-rose-500';
-                else if (approved >= 1) badge.innerText = '연차마감', badge.className += 'bg-red-50 text-red-600';
+                else if (approved >= 1) badge.innerText = '마감', badge.className += 'bg-red-50 text-red-600';
                 else if (pending >= 1) badge.innerText = '승인중', badge.className += 'bg-yellow-50 text-yellow-600';
                 else badge.innerText = '가능', badge.className += 'bg-emerald-50 text-emerald-500';
                 topRow.appendChild(badge);
@@ -383,23 +381,31 @@
                 grid.appendChild(cell);
             }
             
-            if (selectedDateStr) {
-                const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && String(r.status) !== '반려');
-                renderDateSummary(selectedDateStr, allDayRequests);
-            } else {
-                const summaryContainer = document.getElementById('date-summary-container');
-                if (summaryContainer) summaryContainer.classList.add('hidden');
-            }
+            // 해당 월 전체 신청 현황 표시 (선택과 무관하게 상시 노출)
+            renderMonthlySummary();
         }
-        
-        function renderDateSummary(date, reqs) {
-            const list = document.getElementById('date-summary-list'); document.getElementById('summary-date-text').innerText = date; list.innerHTML = '';
-            if (!reqs.length) list.innerHTML = '<div class="text-[11px] text-slate-400 font-bold p-3 text-center">신청 내역이 없습니다.</div>';
-            else reqs.forEach(req => {
-                const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
-                const roleName = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' }[req.userRole] || req.userRole;
-                list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${roleName}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
-            });
+
+        // 🚀 클릭 없이 해당 월 전체 현황을 모아 보여주는 함수
+        function renderMonthlySummary() {
+            const year = currentDate.getFullYear(), month = currentDate.getMonth();
+            const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+            document.getElementById('summary-date-text').innerText = `${year}년 ${month + 1}월`;
+            
+            const list = document.getElementById('date-summary-list');
+            list.innerHTML = '';
+
+            const monthlyReqs = state.requests.filter(r => formatDate(r.leaveDate).startsWith(monthPrefix) && String(r.status) !== '반려');
+            monthlyReqs.sort((a, b) => new Date(a.leaveDate) - new Date(b.leaveDate));
+
+            if (!monthlyReqs.length) {
+                list.innerHTML = '<div class="text-[11px] text-slate-400 font-bold p-3 text-center">해당 월에 신청된 내역이 없습니다.</div>';
+            } else {
+                monthlyReqs.forEach(req => {
+                    const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
+                    const roleName = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' }[req.userRole] || req.userRole;
+                    list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-[11px] font-bold text-slate-500 w-10 shrink-0">${formatDate(req.leaveDate).slice(5)}</div><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${roleName}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
+                });
+            }
             document.getElementById('date-summary-container').classList.remove('hidden');
         }
 
@@ -432,6 +438,7 @@
             }
         }
 
+        // 🚀 API 호출 (글로벌 오버레이 제어)
         async function apiCall(action, data = {}, loaderText = false) {
             if (loaderText) {
                 const textEl = document.getElementById('loading-text');
@@ -451,25 +458,33 @@
             }
         }
 
-        // 🚀 지연 업데이트 (상태 변경 시)
         async function updateStatus(id, status) {
-            const res = await apiCall('updateStatus', { requestId: id, status }, '상태 변경 중...');
-            if (res) { 
-                showAlert('변경완료됨', 'success'); 
-                setTimeout(() => {
-                    refreshData(false);
-                }, 5000); 
+            // 로딩과 함께 서버에 즉시 반영
+            document.getElementById('loading-text').innerText = '상태 변경 중...';
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await apiCall('updateStatus', { requestId: id, status }, false);
+                if (res) { 
+                    showAlert('변경완료됨', 'success'); 
+                    setTimeout(() => { refreshData(false); }, 5000); 
+                }
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
-        // 🚀 지연 업데이트 (삭제 시)
         async function performDelete(id) {
-            const res = await apiCall('deleteRequest', { requestId: id }, '연차 삭제 중...');
-            if (res) { 
-                showAlert('삭제/취소 완료', 'success'); 
-                setTimeout(() => {
-                    refreshData(false);
-                }, 5000); 
+            // 로딩 오버레이와 함께 삭제 및 시트 최신화
+            document.getElementById('loading-text').innerText = '연차 삭제 중...';
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await apiCall('deleteRequest', { requestId: id }, false);
+                if (res) { 
+                    showAlert('삭제/취소 완료', 'success'); 
+                    await refreshData(false); // 서버 최신화하여 화면 반영
+                }
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
@@ -495,7 +510,6 @@
 
             state.requests = state.requests || [];
             
-            // 🚀 시트 문자열(1일 5시간) 대응 파싱 적용
             let totalDecimal = parseLeaveString(u.total);
             let usedDecimal = parseLeaveString(u.used);
 
@@ -505,7 +519,6 @@
 
             const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
-            // 일반 사원 패널 
             if (!isAdmin) {
                 const body = document.getElementById('history-body'); body.innerHTML = '';
                 const filtered = state.requests.filter(r => String(r.userId) === String(u.id));
@@ -519,7 +532,7 @@
                             cancelBtn = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black hover:bg-rose-100 hover:text-rose-600 transition-all">취소</button>`;
                         }
                         body.innerHTML += `
-                            <!-- 모바일 카드 뷰 (4단 1줄 나열 최적화) -->
+                            <!-- 모바일 카드 뷰 -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
                                 <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
                                     <div class="flex items-baseline gap-2">
@@ -529,9 +542,12 @@
                                     <span class="px-2.5 py-1.5 rounded-md text-[10px] font-black ${color}">${req.status}</span>
                                 </td>
                                 <td class="flex flex-col gap-2 w-full mb-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">일정</span>
-                                        <span class="text-[12px] font-bold text-slate-800 text-right break-keep">${formatDate(req.leaveDate)}</span>
+                                    <div class="flex justify-between items-start">
+                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10 pt-0.5">일정</span>
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-[12px] font-bold text-slate-800 break-keep">${formatDate(req.leaveDate)}</span>
+                                            <span class="text-[10px] text-slate-400 mt-0.5">신청일: ${formatDate(req.requestDate)}</span>
+                                        </div>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">유형</span>
@@ -570,7 +586,6 @@
                 }
             }
             
-            // 관리자 패널 
             if (isAdmin) {
                 const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
                 const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
@@ -622,7 +637,7 @@
                         btns += `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-400 text-white px-2 py-1.5 rounded text-[10px] font-bold ml-1"><i class="fas fa-trash"></i></button>`;
 
                         adminBody.innerHTML += `
-                            <!-- 모바일 카드 뷰 (4단 1줄 나열 최적화) -->
+                            <!-- 모바일 카드 뷰 -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
                                 <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
                                     <div class="flex items-baseline gap-2">
@@ -632,9 +647,12 @@
                                     <span class="px-2.5 py-1.5 rounded-md text-[10px] font-black ${color}">${req.status}</span>
                                 </td>
                                 <td class="flex flex-col gap-2 w-full mb-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">일정</span>
-                                        <span class="text-[12px] font-bold text-slate-800 text-right break-keep">${formatDate(req.leaveDate)}</span>
+                                    <div class="flex justify-between items-start">
+                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10 pt-0.5">일정</span>
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-[12px] font-bold text-slate-800 break-keep">${formatDate(req.leaveDate)}</span>
+                                            <span class="text-[10px] text-slate-400 mt-0.5">신청일: ${formatDate(req.requestDate)}</span>
+                                        </div>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">유형</span>
@@ -662,6 +680,7 @@
                                 <td class="p-4">
                                     <div class="text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
                                     <div class="text-xs font-black text-blue-500 mt-1">${req.type}</div>
+                                    <div class="text-[10px] text-slate-400 mt-1.5">신청: ${formatDate(req.requestDate)}</div>
                                 </td>
                                 <td class="p-4 whitespace-normal break-keep">
                                     <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
@@ -703,19 +722,11 @@
                 if(!idVal) return showAlert('아이디를 입력해주세요.', 'error');
                 if(!pwVal) return showAlert('비밀번호를 입력해주세요.', 'error');
 
-                const btn = e.target.querySelector('button');
-                const origText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>로그인 중...';
-                btn.disabled = true;
-
-                const res = await apiCall('login', { id: idVal, pw: pwVal }, false);
+                const res = await apiCall('login', { id: idVal, pw: pwVal }, '로그인 중...');
                 if (res) { 
                     state.currentUser = res.user; state.requests = res.requests; 
                     safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
                     location.reload(); 
-                } else {
-                    btn.innerHTML = origText;
-                    btn.disabled = false;
                 }
             };
 
@@ -735,26 +746,20 @@
                 if(!idVal) return showAlert('아이디를 입력해주세요.', 'error');
                 if(!pwVal) return showAlert('비밀번호를 입력해주세요.', 'error');
 
-                const btn = e.target.querySelector('button');
-                const origText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 처리 중...';
-                btn.disabled = true;
-
                 const initialTotalLeave = calculateInitialLeave(joinVal);
                 const res = await apiCall('register', {
                     name: nameVal, birth: birthVal, phone: phoneVal, joinDate: joinVal, id: idVal, pw: pwVal,
                     role: document.getElementById('reg-team').value, totalLeave: initialTotalLeave
-                }, false);
+                }, '가입 처리 중...');
                 
                 if (res) {
                     showAlert('가입이 완료되었습니다. 로그인해주세요!', 'success');
                     toggleAuthMode(false);
                     document.getElementById('register-form').reset();
                 }
-                btn.innerHTML = origText;
-                btn.disabled = false;
             };
 
+            // 🚀 연차 신청 시 전역 로딩창 및 확실한 데이터 갱신
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -779,12 +784,19 @@
                     deduction: deductionAmount
                 };
 
-                const res = await apiCall('requestLeave', newReq, '연차 신청 중...');
-                if (res) { 
-                    showAlert('신청되었습니다.', 'success'); 
-                    document.getElementById('leave-request-form').reset(); 
-                    selectedDateStr = ''; updateDropdownsForDate(''); 
-                    await refreshData(false); 
+                // 로딩 창 띄우고 처리 완료 시 캐시 동기화
+                document.getElementById('loading-text').innerText = '연차 신청 중...';
+                document.getElementById('loading').classList.remove('hidden');
+                try {
+                    const res = await apiCall('requestLeave', newReq, false);
+                    if (res) { 
+                        showAlert('신청되었습니다.', 'success'); 
+                        document.getElementById('leave-request-form').reset(); 
+                        selectedDateStr = ''; updateDropdownsForDate(''); 
+                        await refreshData(false); // 서버 최신 상태 다시 불러와서 내역 표기
+                    }
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
                 }
             };
         });
