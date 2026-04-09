@@ -28,7 +28,7 @@
     <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
         <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
-            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 처리 중...</p>
+            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
         </div>
     </div>
 
@@ -229,8 +229,10 @@
 
     <script>
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8MMIq0F6g/exec"; 
+        
         let state = { currentUser: null, requests: [], allUsers: [] };
         let currentDate = new Date(), selectedDateStr = '', deleteTargetId = null;
+        const ROLE_MAP = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
         const safeStorage = {
             get: (key) => sessionStorage.getItem(key),
@@ -329,13 +331,16 @@
                 }
 
                 const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
-                cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start transition-all min-h-[75px] sm:min-h-[90px] relative overflow-hidden bg-white hover:border-blue-300 cursor-pointer`;
-                if (isClosed) cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start min-h-[75px] sm:min-h-[90px] bg-slate-50 opacity-60 cursor-not-allowed`;
+                
+                // 🚀 모바일 캘린더 글자 짤림 방지 (min-height 증가 및 패딩 조정)
+                cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start transition-all min-h-[80px] sm:min-h-[100px] relative overflow-hidden bg-white hover:border-blue-300 cursor-pointer`;
+                if (isClosed) cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start min-h-[80px] sm:min-h-[100px] bg-slate-50 opacity-60 cursor-not-allowed`;
                 else if (isPast) cell.classList.add('bg-slate-50', 'text-slate-400');
                 if (dateStr === selectedDateStr) cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
 
+                // 🚀 달력 뱃지 텍스트 간소화 ("연차마감" -> "마감")
                 const topRow = document.createElement('div');
-                topRow.className = 'w-full flex justify-between items-start mb-1';
+                topRow.className = 'w-full flex justify-between items-start mb-1 gap-1';
 
                 const dateNum = document.createElement('span');
                 dateNum.className = `text-[11px] sm:text-[13px] font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
@@ -343,7 +348,7 @@
                 topRow.appendChild(dateNum);
 
                 const badge = document.createElement('span');
-                badge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md text-center max-w-[60%] truncate `;
+                badge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md text-center whitespace-nowrap shrink-0 `;
                 if (isPast) badge.innerText = '마감', badge.className += 'bg-slate-100 text-slate-400';
                 else if (isClosed) badge.innerText = '휴무', badge.className += 'bg-rose-50 text-rose-500';
                 else if (approved >= 1) badge.innerText = '마감', badge.className += 'bg-red-50 text-red-600';
@@ -352,8 +357,9 @@
                 topRow.appendChild(badge);
                 cell.appendChild(topRow);
 
+                // 🚀 달력 셀 내부 텍스트 짤림 방지 (truncate 제거, 줄바꿈 허용)
                 const reqList = document.createElement('div');
-                reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[50px]';
+                reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[60px]';
                 allDayReqs.forEach(req => {
                     const reqItem = document.createElement('div');
                     const colorClass = String(req.status).includes('승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
@@ -364,7 +370,7 @@
                     else if(shortType.includes('반차')) shortType = '반차';
                     else if(shortType.includes('잔여')) shortType = '잔여';
 
-                    reqItem.className = `text-[9px] sm:text-[10px] px-1 py-0.5 rounded w-full font-bold text-left truncate ${colorClass}`;
+                    reqItem.className = `text-[9px] sm:text-[10px] px-1 py-1 rounded w-full font-bold text-center leading-tight break-keep whitespace-normal ${colorClass}`;
                     reqItem.innerText = `${req.userName}(${shortType})`;
                     reqList.appendChild(reqItem);
                 });
@@ -375,17 +381,17 @@
                         selectedDateStr = dateStr;
                         if (!isPast) document.getElementById('leave-date').value = dateStr, updateDropdownsForDate(dateStr, approved >= 1, pending >= 1);
                         else document.getElementById('leave-date').value = '', updateDropdownsForDate('');
-                        renderCalendar();
+                        renderCalendar(); // 클릭 시 파란색 테두리 활성화 용도
                     };
                 }
                 grid.appendChild(cell);
             }
             
-            // 해당 월 전체 신청 현황 표시 (선택과 무관하게 상시 노출)
+            // 🚀 항상 현재 달(Month)의 전체 신청 내역을 캘린더 하단에 고정 표시
             renderMonthlySummary();
         }
 
-        // 🚀 클릭 없이 해당 월 전체 현황을 모아 보여주는 함수
+        // 🚀 선택된 달력 월의 전체 요약 리스트 출력 함수
         function renderMonthlySummary() {
             const year = currentDate.getFullYear(), month = currentDate.getMonth();
             const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -402,7 +408,7 @@
             } else {
                 monthlyReqs.forEach(req => {
                     const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
-                    const roleName = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' }[req.userRole] || req.userRole;
+                    const roleName = ROLE_MAP[req.userRole] || req.userRole;
                     list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-[11px] font-bold text-slate-500 w-10 shrink-0">${formatDate(req.leaveDate).slice(5)}</div><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${roleName}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
                 });
             }
@@ -438,7 +444,7 @@
             }
         }
 
-        // 🚀 API 호출 (글로벌 오버레이 제어)
+        // 🚀 공통 API 호출 (로딩 텍스트 제어 포함)
         async function apiCall(action, data = {}, loaderText = false) {
             if (loaderText) {
                 const textEl = document.getElementById('loading-text');
@@ -458,48 +464,82 @@
             }
         }
 
+        // 🚀 서버에 먼저 100% 저장 후, 프론트엔드 상태 업데이트
         async function updateStatus(id, status) {
-            // 로딩과 함께 서버에 즉시 반영
-            document.getElementById('loading-text').innerText = '상태 변경 중...';
-            document.getElementById('loading').classList.remove('hidden');
-            try {
-                const res = await apiCall('updateStatus', { requestId: id, status }, false);
-                if (res) { 
-                    showAlert('변경완료됨', 'success'); 
-                    setTimeout(() => { refreshData(false); }, 5000); 
+            const res = await apiCall('updateStatus', { requestId: id, status }, '상태 변경 중...');
+            if (res) { 
+                const idx = state.requests.findIndex(r => String(r.id) === String(id));
+                if (idx !== -1) {
+                    const oldStatus = state.requests[idx].status;
+                    state.requests[idx].status = status;
+                    
+                    // 반려 취소/적용 시 차감일 수 로컬 즉시 보정
+                    if (oldStatus !== '반려' && status === '반려') {
+                        state.currentUser.used = parseLeaveString(state.currentUser.used) - getDeductionDaysLocally(state.requests[idx].type);
+                    } else if (oldStatus === '반려' && status !== '반려') {
+                        state.currentUser.used = parseLeaveString(state.currentUser.used) + getDeductionDaysLocally(state.requests[idx].type);
+                    }
+                    
+                    // 어드민 대시보드 요약용 allUsers 업데이트
+                    if (state.allUsers) {
+                        const targetUser = state.allUsers.find(u => String(u.id) === String(state.requests[idx].userId));
+                        if (targetUser) {
+                            if (oldStatus !== '반려' && status === '반려') targetUser.used = parseLeaveString(targetUser.used) - getDeductionDaysLocally(state.requests[idx].type);
+                            else if (oldStatus === '반려' && status !== '반려') targetUser.used = parseLeaveString(targetUser.used) + getDeductionDaysLocally(state.requests[idx].type);
+                        }
+                    }
                 }
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
+                safeStorage.set('leavepass_user', JSON.stringify({user: state.currentUser, requests: state.requests}));
+                renderDashboard(); renderCalendar();
+                showAlert('상태가 변경되었습니다.', 'success'); 
             }
         }
 
+        // 🚀 서버에 먼저 100% 삭제 후, 프론트엔드 상태 업데이트
         async function performDelete(id) {
-            // 로딩 오버레이와 함께 삭제 및 시트 최신화
-            document.getElementById('loading-text').innerText = '연차 삭제 중...';
-            document.getElementById('loading').classList.remove('hidden');
-            try {
-                const res = await apiCall('deleteRequest', { requestId: id }, false);
-                if (res) { 
-                    showAlert('삭제/취소 완료', 'success'); 
-                    await refreshData(false); // 서버 최신화하여 화면 반영
+            const res = await apiCall('deleteRequest', { requestId: id }, '연차 삭제 중...');
+            if (res) { 
+                const idx = state.requests.findIndex(r => String(r.id) === String(id));
+                if (idx !== -1) {
+                    const req = state.requests[idx];
+                    if (req.status !== '반려') {
+                        state.currentUser.used = parseLeaveString(state.currentUser.used) - getDeductionDaysLocally(req.type);
+                        if (state.allUsers) {
+                            const targetUser = state.allUsers.find(u => String(u.id) === String(req.userId));
+                            if (targetUser) targetUser.used = parseLeaveString(targetUser.used) - getDeductionDaysLocally(req.type);
+                        }
+                    }
+                    state.requests.splice(idx, 1);
                 }
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
+                safeStorage.set('leavepass_user', JSON.stringify({user: state.currentUser, requests: state.requests}));
+                renderDashboard(); renderCalendar();
+                showAlert('삭제/취소 완료', 'success'); 
             }
         }
 
+        // 소수점 1일 8시간 (0.625, 0.375) 변환 로직
         function getDeductionDaysLocally(type) {
             if (!type) return 0; const t = String(type).toLowerCase();
             if (t.includes('무급')) return 0; 
-            if (t.includes('잔여')) return 3 / 8; 
-            if (t.includes('반차')) return 5 / 8; 
+            if (t.includes('잔여')) return 3 / 8; // 0.375
+            if (t.includes('반차')) return 5 / 8; // 0.625
             return 1; 
+        }
+        
+        // 🚀 시트에 문자열("5시간", "3시간")로 저장되도록 준비하는 텍스트 변환 함수
+        function getDeductionTextLocally(type) {
+            if (!type) return "0일"; const t = String(type).toLowerCase();
+            if (t.includes('무급')) return "0일";
+            if (t.includes('잔여')) return "3시간";
+            if (t.includes('반차')) return "5시간";
+            return "1일";
         }
 
         function renderDashboard() {
             const u = state.currentUser; if (!u) return;
             const isAdmin = String(u.role).includes('admin');
             
+            // 권한에 따른 패널 스위칭
             if(isAdmin) {
                 document.getElementById('user-history').classList.add('hidden');
                 document.getElementById('admin-panel').classList.remove('hidden');
@@ -512,13 +552,15 @@
             
             let totalDecimal = parseLeaveString(u.total);
             let usedDecimal = parseLeaveString(u.used);
+            
+            // 🚀 사용량 동기화 완벽 해결: 백엔드와 프론트엔드가 실시간 통신하여 u.used 자체를 갱신하므로 추가 덧셈 로직 불필요
 
-            state.requests.forEach(r => { if (String(r.userId) === String(u.id) && String(r.status) !== '최종 승인' && String(r.status) !== '반려') usedDecimal += getDeductionDaysLocally(r.type); });
             document.getElementById('total-leave').innerText = formatDaysHours(totalDecimal);
             document.getElementById('remaining-leave').innerText = formatDaysHours(totalDecimal - usedDecimal);
 
             const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
+            // 일반 사원 패널 
             if (!isAdmin) {
                 const body = document.getElementById('history-body'); body.innerHTML = '';
                 const filtered = state.requests.filter(r => String(r.userId) === String(u.id));
@@ -532,7 +574,7 @@
                             cancelBtn = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black hover:bg-rose-100 hover:text-rose-600 transition-all">취소</button>`;
                         }
                         body.innerHTML += `
-                            <!-- 모바일 카드 뷰 -->
+                            <!-- 모바일 카드 뷰 (4단 1줄 나열 최적화) -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
                                 <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
                                     <div class="flex items-baseline gap-2">
@@ -586,6 +628,7 @@
                 }
             }
             
+            // 관리자 패널 
             if (isAdmin) {
                 const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
                 const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
@@ -603,14 +646,7 @@
                             if (found) {
                                 tTotal = parseLeaveString(found.total); 
                                 tUsed = parseLeaveString(found.used);
-                                filtered.forEach(r => { if (String(r.userId) === String(tId) && (r.status === '대기' || r.status === '1차 승인')) tUsed += getDeductionDaysLocally(r.type); });
                             }
-                        } else {
-                            filtered.forEach(r => {
-                                if (String(r.userId) === String(tId) && (r.status === '최종 승인' || r.status === '1차 승인' || r.status === '대기')) {
-                                    used += getDeductionDaysLocally(r.type);
-                                }
-                            });
                         }
                         
                         const remain = tTotal - tUsed;
@@ -722,11 +758,19 @@
                 if(!idVal) return showAlert('아이디를 입력해주세요.', 'error');
                 if(!pwVal) return showAlert('비밀번호를 입력해주세요.', 'error');
 
-                const res = await apiCall('login', { id: idVal, pw: pwVal }, '로그인 중...');
+                const btn = e.target.querySelector('button');
+                const origText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>로그인 중...';
+                btn.disabled = true;
+
+                const res = await apiCall('login', { id: idVal, pw: pwVal }, false);
                 if (res) { 
                     state.currentUser = res.user; state.requests = res.requests; 
                     safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
                     location.reload(); 
+                } else {
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
                 }
             };
 
@@ -746,20 +790,27 @@
                 if(!idVal) return showAlert('아이디를 입력해주세요.', 'error');
                 if(!pwVal) return showAlert('비밀번호를 입력해주세요.', 'error');
 
+                const btn = e.target.querySelector('button');
+                const origText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 처리 중...';
+                btn.disabled = true;
+
                 const initialTotalLeave = calculateInitialLeave(joinVal);
                 const res = await apiCall('register', {
                     name: nameVal, birth: birthVal, phone: phoneVal, joinDate: joinVal, id: idVal, pw: pwVal,
                     role: document.getElementById('reg-team').value, totalLeave: initialTotalLeave
-                }, '가입 처리 중...');
+                }, false);
                 
                 if (res) {
                     showAlert('가입이 완료되었습니다. 로그인해주세요!', 'success');
                     toggleAuthMode(false);
                     document.getElementById('register-form').reset();
                 }
+                btn.innerHTML = origText;
+                btn.disabled = false;
             };
 
-            // 🚀 연차 신청 시 전역 로딩창 및 확실한 데이터 갱신
+            // 🚀 서버에 100% 저장 완료된 후 내역 표기 (로딩 오버레이 띄움)
             document.getElementById('leave-request-form').onsubmit = async (e) => {
                 e.preventDefault(); 
                 const date = document.getElementById('leave-date').value; 
@@ -775,28 +826,30 @@
 
                 const isAdmin = String(state.currentUser.role).includes('admin');
                 const reqStatus = isAdmin ? '최종 승인' : '대기';
+                
                 const deductionAmount = getDeductionDaysLocally(type);
+                const deductionTextAmount = getDeductionTextLocally(type); // 시트에 저장될 텍스트 (예: 5시간)
 
                 const newReq = {
                     userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
                     requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: reasonVal, handover: handoverVal,
                     status: reqStatus,
-                    deduction: deductionAmount
+                    deduction: deductionAmount,
+                    deductionText: deductionTextAmount
                 };
 
-                // 로딩 창 띄우고 처리 완료 시 캐시 동기화
-                document.getElementById('loading-text').innerText = '연차 신청 중...';
-                document.getElementById('loading').classList.remove('hidden');
-                try {
-                    const res = await apiCall('requestLeave', newReq, false);
-                    if (res) { 
-                        showAlert('신청되었습니다.', 'success'); 
-                        document.getElementById('leave-request-form').reset(); 
-                        selectedDateStr = ''; updateDropdownsForDate(''); 
-                        await refreshData(false); // 서버 최신 상태 다시 불러와서 내역 표기
-                    }
-                } finally {
-                    document.getElementById('loading').classList.add('hidden');
+                // 로딩 창을 띄우며 백엔드로 전송
+                const res = await apiCall('requestLeave', newReq, '연차 신청 중...');
+                if (res) { 
+                    // 백엔드 성공 응답 후 로컬 데이터에 수동 추가하여 즉각 렌더링
+                    state.requests.unshift({ ...newReq, id: 'temp-' + Date.now() });
+                    state.currentUser.used = parseLeaveString(state.currentUser.used) + deductionAmount;
+                    safeStorage.set('leavepass_user', JSON.stringify({user: state.currentUser, requests: state.requests})); 
+                    
+                    showAlert('신청되었습니다.', 'success'); 
+                    document.getElementById('leave-request-form').reset(); 
+                    selectedDateStr = ''; updateDropdownsForDate(''); 
+                    renderDashboard(); renderCalendar();
                 }
             };
         });
