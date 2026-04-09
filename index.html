@@ -1,800 +1,219 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>서울더리본치과 연차 관리</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        html, body { overflow-x: hidden; font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .glass-morphism { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-        .label-text { width: 80px; font-size: 14px; font-weight: 700; color: #334155; flex-shrink: 0; }
-        .input-field { flex: 1; padding: 12px 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; transition: all 0.2s; }
-        .input-field:focus:not(:disabled) { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); background-color: #ffffff; }
-        input::placeholder { color: #cbd5e1; }
-        td, th { white-space: nowrap; }
+/**
+ * 연차 관리 시스템 Backend (최신 프론트엔드 완벽 호환)
+ * - 관리자 자동 승인 및 즉시 차감 지원
+ * - '반차', '잔여' 텍스트 인식에 따른 소수점(시간) 차감 완벽 지원
+ * - ID 타입 캐스팅(String)을 통한 데이터 누락/버그 원천 차단
+ */
+const SPREADSHEET_ID = "1FGruRHR_n010jDsINPNMq2kLIWXUbgRAumBIRvWqdMc"; // 본인의 시트 ID
+const USER_SHEET_NAME = "회원정보";
+const LEAVE_SHEET_NAME = "연차관리";
 
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-        .welcome-text { font-size: 1.3rem; font-weight: 900; line-height: 1.2; }
-        @media (max-width: 640px) { .welcome-text { font-size: 1.1rem; } .label-text { width: 60px; font-size: 12px; } }
-    </style>
-</head>
-<body class="min-h-screen">
+function jsonResponse(obj) { 
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); 
+}
 
-    <!-- 글로벌 로딩 오버레이 (반드시 필요한 작업 시에만 제한적으로 사용) -->
-    <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
-        <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
-            <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
-            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
-        </div>
-    </div>
+function doPost(e) {
+  let params;
+  try { 
+    params = JSON.parse(e.postData.contents); 
+  } catch (err) { 
+    return jsonResponse({ status: 'error', message: '잘못된 데이터 형식' }); 
+  }
+  
+  const action = params.action;
+  try {
+    switch(action) {
+      case 'register': return register(params);
+      case 'login': return login(params);
+      case 'requestLeave': return requestLeave(params);
+      case 'fetchData': return fetchData(params);
+      case 'updateStatus': return updateStatus(params);
+      case 'deleteRequest': return deleteRequest(params);
+      default: throw "알 수 없는 작업입니다.";
+    }
+  } catch (err) { 
+    return jsonResponse({ status: 'error', message: err.toString() }); 
+  }
+}
 
-    <!-- 알림 컨테이너 -->
-    <div id="alert-container" class="fixed top-4 right-0 left-0 sm:left-auto sm:right-4 z-[9999] flex flex-col items-center sm:items-end px-4 space-y-2 pointer-events-none"></div>
+function register(p) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(USER_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(p.id)) throw "이미 존재하는 아이디입니다.";
+  }
+  const totalLeave = p.totalLeave !== undefined ? p.totalLeave : 15;
+  sheet.appendRow([p.id, p.pw, p.name, p.phone, p.birth, p.joinDate, p.role || 'user', totalLeave, 0]);
+  return jsonResponse({ status: 'success' });
+}
 
-    <!-- 확인 모달 -->
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 z-[9000] flex items-center justify-center hidden p-4 transition-all duration-200">
-        <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in">
-            <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-check"></i></div>
-            <h3 class="text-xl font-black text-slate-800 mb-2">요청을 처리할까요?</h3>
-            <p class="text-sm text-slate-500 mb-8">내역이 즉시 반영됩니다.</p>
-            <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 rounded-2xl font-black hover:bg-slate-200 transition-colors">취소</button>
-                <button id="confirm-action-btn" class="flex-1 bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black transition-colors">확인</button>
-            </div>
-        </div>
-    </div>
+function getAllUsers() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(USER_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  const users = [];
+  for (let i = 1; i < data.length; i++) {
+    users.push({ id: String(data[i][0]), name: data[i][2], role: data[i][6], total: data[i][7], used: data[i][8] });
+  }
+  return users;
+}
 
-    <div id="app" class="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8 h-full">
-        <!-- 로그인 섹션 -->
-        <div id="auth-section" class="max-w-md w-full mx-auto min-h-[60vh] flex flex-col justify-center hidden">
-            <div class="glass-morphism p-6 sm:p-8 rounded-[2rem] shadow-2xl border border-white">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-black text-blue-600 tracking-tighter">서울더리본치과</h1>
-                    <p class="text-xs text-slate-500 mt-2 font-medium">연차 관리 시스템</p>
-                </div>
-                <form id="login-form" autocomplete="off" class="space-y-4">
-                    <div class="form-row"><label class="label-text">아이디</label><input type="text" id="login-id" class="input-field" placeholder="아이디"></div>
-                    <div class="form-row"><label class="label-text">비밀번호</label><input type="password" id="login-pw" class="input-field" placeholder="••••••••"></div>
-                    <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 transition-colors">로그인</button>
-                    <p class="text-center text-xs sm:text-sm text-slate-500 mt-5 font-medium">
-                        계정이 없으신가요? <a href="#" onclick="toggleAuthMode(true)" class="text-blue-600 font-black hover:underline cursor-pointer">회원가입</a>
-                    </p>
-                </form>
+function login(p) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(USER_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(p.id) && String(data[i][1]) === String(p.pw)) {
+      const user = { id: String(data[i][0]), name: data[i][2], role: data[i][6], total: data[i][7], used: data[i][8] };
+      let res = { status: 'success', user: user, requests: getRequests() };
+      if (String(user.role).includes('admin')) res.allUsers = getAllUsers();
+      return jsonResponse(res);
+    }
+  }
+  throw "아이디 또는 비밀번호가 일치하지 않습니다.";
+}
 
-                <form id="register-form" class="w-full hidden space-y-4" autocomplete="off">
-                    <div class="form-row">
-                        <label class="label-text">소속 팀</label>
-                        <select id="reg-team" class="input-field cursor-pointer font-bold">
-                            <option value="user">진료팀</option>
-                            <option value="desk">데스크팀</option>
-                        </select>
-                    </div>
-                    <div class="form-row"><label class="label-text">이름</label><input type="text" id="reg-name" maxlength="5" class="input-field" placeholder="예: 홍길동"></div>
-                    <div class="form-row"><label class="label-text">생년월일</label><input type="text" id="reg-birth" maxlength="10" class="input-field" placeholder="1990-01-01" oninput="autoHyphenDate(this)"></div>
-                    <div class="form-row"><label class="label-text">연락처</label><input type="tel" id="reg-phone" maxlength="13" class="input-field" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)"></div>
-                    <div class="form-row"><label class="label-text">입사일</label><input type="text" id="reg-join" maxlength="10" class="input-field" placeholder="2024-01-01" oninput="autoHyphenDate(this)"></div>
-                    <div class="form-row"><label class="label-text">아이디</label><input type="text" id="reg-id" class="input-field" placeholder="영문/숫자" autocomplete="off"></div>
-                    <div class="form-row"><label class="label-text">비밀번호</label><input type="password" id="reg-pw" class="input-field" placeholder="••••••••" autocomplete="new-password"></div>
+function getRequests() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(LEAVE_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    list.push({
+      id: String(data[i][0]), requestDate: data[i][1], userId: String(data[i][2]), userName: data[i][3],
+      userRole: data[i][4], leaveDate: data[i][5], type: data[i][6], reason: data[i][7], handover: data[i][8], status: data[i][9]
+    });
+  }
+  return list.reverse();
+}
 
-                    <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg mt-2">가입 완료</button>
-                    <p class="text-center text-xs sm:text-sm text-slate-500 mt-5 font-medium">
-                        이미 계정이 있나요? <a href="#" onclick="toggleAuthMode(false)" class="text-blue-600 font-black hover:underline cursor-pointer">로그인</a>
-                    </p>
-                </form>
-            </div>
-        </div>
+function fetchData(p) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(USER_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(p.id)) {
+      const user = { id: String(data[i][0]), name: data[i][2], role: data[i][6], total: data[i][7], used: data[i][8] };
+      let res = { status: 'success', user: user, requests: getRequests() };
+      if (String(user.role).includes('admin')) res.allUsers = getAllUsers();
+      return jsonResponse(res);
+    }
+  }
+  throw "사용자를 찾을 수 없습니다.";
+}
 
-        <!-- 메인 콘텐츠 섹션 -->
-        <div id="main-section" class="hidden">
-            <nav class="flex justify-between items-center mb-6 glass-morphism p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-white">
-                <div class="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div class="bg-blue-600 text-white p-2 sm:p-3 rounded-lg sm:rounded-xl shrink-0"><i class="fas fa-calendar-check text-lg"></i></div>
-                    <div class="flex flex-col min-w-0">
-                        <span class="text-[10px] font-black text-blue-600 tracking-widest uppercase truncate">SEOUL THE RIBBON</span>
-                        <h2 id="welcome-msg" class="welcome-text text-slate-800 tracking-tighter truncate"></h2>
-                    </div>
-                </div>
-                <button type="button" onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 sm:bg-transparent rounded-xl cursor-pointer relative z-[100]">
-                    <i class="fas fa-sign-out-alt text-xl"></i>
-                </button>
-            </nav>
+// 🚀 백엔드 시간제 연차 차감 로직 (소수점 처리)
+function getDeductionDays(type) {
+  if (!type) return 0;
+  const t = String(type).toLowerCase();
+  if (t.includes('무급')) return 0;
+  if (t.includes('잔여')) return 3 / 8; // 3시간 차감 (0.375일) - 우선 체크
+  if (t.includes('반차')) return 5 / 8; // 5시간 차감 (0.625일)
+  return 1; // 일반 연차 (1일)
+}
 
-            <div id="calendar-section" class="glass-morphism rounded-2xl sm:rounded-3xl shadow-sm border border-white p-4 sm:p-6 mb-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-base sm:text-xl font-black text-slate-800 flex items-center gap-2"><i class="far fa-calendar-alt text-blue-500"></i> 일정 확인 및 선택</h3>
-                    <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                        <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600 hover:text-blue-600 transition-colors"><i class="fas fa-chevron-left text-xs"></i></button>
-                        <span id="calendar-month-year" class="font-black text-slate-700 w-24 sm:w-32 text-center text-sm sm:text-base"></span>
-                        <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-slate-600 hover:text-blue-600 transition-colors"><i class="fas fa-chevron-right text-xs"></i></button>
-                    </div>
-                </div>
-                <div class="calendar-grid mb-2">
-                    <div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">일</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">월</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">화</div><div class="text-center font-bold text-[10px] sm:text-xs text-red-400 py-1">수</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">목</div><div class="text-center font-bold text-[10px] sm:text-xs text-slate-400 py-1">금</div><div class="text-center font-bold text-[10px] sm:text-xs text-blue-400 py-1">토</div>
-                </div>
-                <div id="calendar-grid" class="calendar-grid"></div>
+function requestLeave(p) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const leaveSheet = ss.getSheetByName(LEAVE_SHEET_NAME);
+  
+  const status = p.status ? p.status : "대기";
+  
+  leaveSheet.appendRow([
+    Date.now().toString(),
+    p.requestDate,
+    p.userId,
+    p.userName,
+    p.userRole, 
+    p.leaveDate,
+    p.type,
+    p.reason,
+    p.handover,
+    status
+  ]);
 
-                <!-- 캘린더 하단에 별도로 표시되는 날짜별 신청 내역 요약 -->
-                <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
-                    <h4 class="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                        <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
-                    </h4>
-                    <div id="date-summary-list" class="flex flex-col"></div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="space-y-6">
-                    <div class="glass-morphism p-6 rounded-2xl shadow-sm border border-white border-l-8 border-l-blue-500">
-                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
-                        <div class="flex items-baseline gap-2 mt-2">
-                            <h2 id="remaining-leave" class="text-3xl sm:text-5xl font-black text-slate-800 tracking-tighter">0일</h2>
-                            <span class="text-slate-400 font-bold text-sm">/ <span id="total-leave">0</span>일</span>
-                        </div>
-                    </div>
-
-                    <div id="user-request-card" class="glass-morphism p-5 rounded-2xl shadow-sm border border-white">
-                        <h3 class="text-base font-black text-slate-800 mb-5 flex items-center gap-2"><i class="fas fa-paper-plane text-blue-500"></i> 연차 신청</h3>
-                        <form id="leave-request-form" class="space-y-3">
-                            <div class="form-row"><label class="label-text">연차 일정</label><input type="date" id="leave-date" class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();"></div>
-                            <div class="form-row"><label class="label-text">연차 유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold" style="color: #1d4ed8;">
-                                    <option value="" disabled selected>↑ 일정을 선택하세요</option>
-                                </select>
-                            </div>
-                            <div id="detail-container" class="form-row hidden animate-in slide-in-from-top-2">
-                                <label class="label-text">상세 선택</label>
-                                <select id="leave-detail" class="input-field cursor-pointer bg-blue-50 text-blue-700 font-bold" style="color: #1d4ed8;"></select>
-                            </div>
-                            <div class="form-row"><label class="label-text">연차 사유</label><input type="text" id="leave-reason" class="input-field" placeholder="사유 입력"></div>
-                            <div class="form-row"><label class="label-text">인수 인계</label><input type="text" id="leave-handover" class="input-field" placeholder="인수자 및 사항"></div>
-                            <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl hover:bg-black transition-colors flex items-center justify-center">
-                                신청하기
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- 일반 사용자용 내역 패널 -->
-                    <div id="user-history" class="glass-morphism rounded-2xl shadow-sm border border-white overflow-hidden">
-                        <div class="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
-                            <h3 class="text-base font-black text-slate-800">내 연차 내역</h3>
-                            <button onclick="refreshData(this)" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-100 transition-all flex items-center"><i class="fas fa-sync-alt mr-1"></i> 데이터 갱신</button>
-                        </div>
-                        <div class="overflow-x-auto sm:overflow-visible">
-                            <table class="w-full text-left sm:min-w-[450px]">
-                                <thead class="hidden sm:table-header-group border-b border-slate-100">
-                                    <tr class="bg-slate-50/80">
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차일정 / 신청일</th>
-                                        <th class="p-3 sm:p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">연차유형 / 상세사유</th>
-                                        <th class="p-3 sm:p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="history-body" class="flex flex-col gap-3 p-3 sm:p-0 sm:gap-0 sm:table-row-group"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- 관리자용 통합 패널 -->
-                    <div id="admin-panel" class="hidden glass-morphism rounded-2xl shadow-sm border border-white overflow-hidden">
-                        <div class="p-4 sm:p-6 border-b border-slate-100 bg-white/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                            <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center">
-                                <i class="fas fa-users-cog text-blue-600 mr-2"></i>전체 관리 데스크
-                            </h3>
-                            <div class="flex items-center gap-2 w-full sm:w-auto">
-                                <div class="relative flex-1 sm:w-48">
-                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                        <i class="fas fa-search text-slate-400 text-[10px] sm:text-xs"></i>
-                                    </div>
-                                    <input type="text" id="admin-search-name" oninput="renderDashboard()" class="bg-white border border-slate-200 text-slate-900 text-[11px] sm:text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 sm:pl-8 p-1.5 sm:p-2 shadow-sm outline-none transition-all" placeholder="이름 검색...">
-                                </div>
-                                <button onclick="refreshData(this)" class="shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black hover:bg-blue-100 transition-all flex items-center shadow-sm">
-                                    <i class="fas fa-sync-alt mr-1"></i> 데이터 갱신
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="admin-search-summary" class="hidden px-4 py-4 bg-blue-50/30 border-b border-blue-100 flex justify-between items-center gap-3">
-                            <div class="text-sm font-black"><span id="search-summary-name" class="text-blue-600 text-lg"></span> 님</div>
-                            <div class="flex gap-2 text-[10px] font-bold">
-                                <div class="bg-white p-2 rounded-lg border">총: <span id="search-summary-total">0</span></div>
-                                <div class="bg-white p-2 rounded-lg border text-rose-500">사용: <span id="search-summary-used">0</span></div>
-                                <div class="bg-white p-2 rounded-lg border border-blue-200 text-blue-600">잔여: <span id="search-summary-remain">0</span></div>
-                            </div>
-                        </div>
-
-                        <div class="overflow-x-auto sm:overflow-visible bg-slate-50/50 sm:bg-transparent p-3 sm:p-0">
-                            <table class="w-full text-left sm:min-w-[700px] border-collapse">
-                                <thead class="hidden sm:table-header-group border-b border-slate-100">
-                                    <tr class="bg-slate-50/80">
-                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">신청자</th>
-                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">일정 / 유형</th>
-                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">사유 / 인수인계</th>
-                                        <th class="p-4 text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">결재 상태</th>
-                                        <th class="p-4 text-right text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest">관리 액션</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-queue-body" class="flex flex-col gap-3 p-3 sm:p-0 sm:gap-0 sm:table-row-group"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4RU4q3Jc9XStADnW7FYwBw5t1R4R6lAbG2_sRttI7VcBD9vaGFEH1DC0Rj8MMIq0F6g/exec"; 
-        let state = { currentUser: null, requests: [], allUsers: [] };
-        let currentDate = new Date(), selectedDateStr = '', deleteTargetId = null;
-
-        const safeStorage = {
-            get: (key) => sessionStorage.getItem(key),
-            set: (key, val) => sessionStorage.setItem(key, val),
-            remove: (key) => sessionStorage.removeItem(key)
-        };
-
-        window.logout = function() {
-            safeStorage.remove('leavepass_user');
-            state.currentUser = null;
-            state.requests = [];
-            document.getElementById('main-section').classList.add('hidden');
-            document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('login-form').reset();
-            location.href = location.href.split('#')[0];
-        };
-
-        const formatDate = (s) => {
-            if (!s) return "-";
-            const d = new Date(s);
-            if (isNaN(d.getTime())) return String(s).includes('T') ? String(s).split('T')[0] : String(s);
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        };
-
-        const formatDaysHours = (days) => {
-            if (!days) return "0일";
-            const d = Math.floor(Math.abs(days)), h = Math.round((Math.abs(days) - d) * 8);
-            let t = days < 0 ? "-" : "";
-            if (d > 0 && h > 0) t += `${d}일 ${h}시간`;
-            else if (d > 0) t += `${d}일`;
-            else if (h > 0) t += `${h}시간`;
-            else t += "0일";
-            return t;
-        };
-
-        const showAlert = (msg, type = 'info') => {
-            const container = document.getElementById('alert-container');
-            const div = document.createElement('div');
-            const colors = { info: 'bg-blue-600', success: 'bg-emerald-600', error: 'bg-red-600' };
-            div.className = `${colors[type]} text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-xs sm:text-sm animate-in fade-in slide-in-from-top-4 mb-2 pointer-events-auto z-[9999]`;
-            div.innerHTML = `<span>${msg}</span>`;
-            container.appendChild(div);
-            setTimeout(() => { div.classList.add('opacity-0'); setTimeout(() => div.remove(), 300); }, 3000);
-        };
-
-        function autoHyphenPhone(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,3})(\d{0,4})(\d{0,4})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
-        function autoHyphenDate(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{0,4})(\d{0,2})(\d{0,2})$/g, "$1-$2-$3").replace(/\-{1,2}$/g, ""); }
-        
-        function calculateInitialLeave(joinDateStr) {
-            if (!joinDateStr) return 15;
-            const parts = joinDateStr.split('-'); if (parts.length !== 3) return 15;
-            const join = new Date(parts[0], parts[1] - 1, parts[2]), today = new Date();
-            let m = (today.getFullYear() - join.getFullYear()) * 12 - join.getMonth() + today.getMonth();
-            if (today.getDate() < join.getDate()) m--;
-            return m < 12 ? Math.max(0, m) : 15; 
+  // 관리자 신청 등 즉시 '최종 승인'되는 경우 바로 수량 삭감
+  if (status === '최종 승인') {
+      // 프론트에서 받은 deduction 값이 있으면 우선 사용, 없으면 백엔드에서 계산
+      const diff = p.deduction !== undefined ? parseFloat(p.deduction) : getDeductionDays(p.type);
+      const userSheet = ss.getSheetByName(USER_SHEET_NAME);
+      const userData = userSheet.getDataRange().getValues();
+      for (let j = 1; j < userData.length; j++) {
+        if (String(userData[j][0]) === String(p.userId)) {
+          let currentUsed = parseFloat(userData[j][8] || 0);
+          userSheet.getRange(j + 1, 9).setValue(currentUsed + diff);
+          break;
         }
+      }
+  }
 
-        function toggleAuthMode(isRegister) {
-            document.getElementById('login-form').classList.toggle('hidden', isRegister);
-            document.getElementById('register-form').classList.toggle('hidden', !isRegister);
-        }
+  return jsonResponse({ status: 'success' });
+}
 
-        function renderCalendar() {
-            const year = currentDate.getFullYear(), month = currentDate.getMonth();
-            document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
-            const first = new Date(year, month, 1).getDay(), last = new Date(year, month + 1, 0).getDate(),
-                  grid = document.getElementById('calendar-grid'), today = formatDate(new Date());
-            grid.innerHTML = '';
-            for (let i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+function updateStatus(p) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const leaveSheet = ss.getSheetByName(LEAVE_SHEET_NAME);
+  const leaveData = leaveSheet.getDataRange().getValues();
+  let rowIndex = -1; let targetReq = null;
 
-            for (let i = 1; i <= last; i++) {
-                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
-                      dayOfWeek = new Date(year, month, i).getDay();
-                      
-                // 안전한 문자열 치환 비교로 에러 원천 차단
-                const allDayReqs = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && String(r.status) !== '반려');
-                
-                let approved = 0, pending = 0;
-                if (state.currentUser) {
-                    const isAdmin = String(state.currentUser.role).includes('admin');
-                    // 일반 사원도 관리자가 쓴 연차를 마감으로 인식하도록 조건 수정
-                    const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => String(r.userRole) === String(state.currentUser.role) || String(r.userRole).includes('admin'));
-                    approved = targetReqs.filter(r => String(r.status).includes('승인')).length;
-                    pending = targetReqs.filter(r => String(r.status) === '대기').length;
-                }
+  for (let i = 1; i < leaveData.length; i++) {
+    if (String(leaveData[i][0]) === String(p.requestId)) {
+      rowIndex = i + 1;
+      targetReq = { userId: String(leaveData[i][2]), type: leaveData[i][6], status: leaveData[i][9] };
+      break;
+    }
+  }
+  if (rowIndex === -1) throw "내역 없음";
 
-                const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
-                // 모바일에서 글자가 잘리지 않도록 달력 셀 크기를 원상복구
-                cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] cursor-pointer bg-white hover:border-blue-300`;
-                if (isClosed) cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center min-h-[60px] sm:min-h-[75px] bg-slate-50 opacity-60 cursor-not-allowed`;
-                else if (isPast) cell.classList.add('bg-slate-50', 'text-slate-400');
-                if (dateStr === selectedDateStr) cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+  const oldStatus = targetReq.status;
+  const newStatus = p.status;
+  
+  // 상태 업데이트
+  leaveSheet.getRange(rowIndex, 10).setValue(newStatus);
 
-                cell.innerHTML = `<span class="text-[12px] sm:text-sm font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}">${i}</span>`;
-                const badge = document.createElement('span');
-                badge.className = `mt-1 text-[8px] sm:text-[10px] font-black px-1 py-0.5 rounded-md w-full text-center `;
-                if (isPast) badge.innerText = '마감', badge.className += 'bg-slate-100 text-slate-400';
-                else if (isClosed) badge.innerText = '휴무', badge.className += 'bg-rose-50 text-rose-500';
-                else if (approved >= 1) badge.innerText = '연차마감', badge.className += 'bg-red-50 text-red-600';
-                else if (pending >= 1) badge.innerText = '승인중', badge.className += 'bg-yellow-50 text-yellow-600';
-                else badge.innerText = '가능', badge.className += 'bg-emerald-50 text-emerald-500';
-                cell.appendChild(badge);
+  const diff = getDeductionDays(targetReq.type);
+  const userSheet = ss.getSheetByName(USER_SHEET_NAME);
+  const userData = userSheet.getDataRange().getValues();
 
-                if (!isClosed) {
-                    cell.onclick = () => {
-                        selectedDateStr = dateStr;
-                        if (!isPast) document.getElementById('leave-date').value = dateStr, updateDropdownsForDate(dateStr, approved >= 1, pending >= 1);
-                        else document.getElementById('leave-date').value = '', updateDropdownsForDate('');
-                        renderCalendar();
-                    };
-                }
-                grid.appendChild(cell);
-            }
-            
-            // 선택된 날짜에 대한 하단 요약 목록 표시 로직
-            if (selectedDateStr) {
-                const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && String(r.status) !== '반려');
-                renderDateSummary(selectedDateStr, allDayRequests);
-            } else {
-                const summaryContainer = document.getElementById('date-summary-container');
-                if (summaryContainer) summaryContainer.classList.add('hidden');
-            }
-        }
-        
-        function renderDateSummary(date, reqs) {
-            const list = document.getElementById('date-summary-list'); document.getElementById('summary-date-text').innerText = date; list.innerHTML = '';
-            if (!reqs.length) list.innerHTML = '<div class="text-[11px] text-slate-400 font-bold p-3 text-center">신청 내역이 없습니다.</div>';
-            else reqs.forEach(req => {
-                const color = req.status.includes('최종') ? 'bg-emerald-100 text-emerald-600' : req.status.includes('1차') ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600';
-                const roleName = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' }[req.userRole] || req.userRole;
-                list.innerHTML += `<div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0"><div class="flex items-center gap-2 flex-1 min-w-0"><div class="text-xs sm:text-sm font-black">${req.userName} <span class="text-[9px] text-blue-600 bg-blue-50 border border-blue-100 px-1 rounded">${roleName}</span></div><div class="text-[11px] text-slate-500 truncate font-bold">${req.type}</div></div><span class="px-2 py-1 rounded-md text-[10px] font-black ${color} shrink-0">${req.status}</span></div>`;
-            });
-            document.getElementById('date-summary-container').classList.remove('hidden');
-        }
+  for (let j = 1; j < userData.length; j++) {
+    if (String(userData[j][0]) === String(targetReq.userId)) {
+      let currentUsed = parseFloat(userData[j][8] || 0);
+      if (oldStatus !== '최종 승인' && newStatus === '최종 승인') {
+          currentUsed += diff;
+      } else if (oldStatus === '최종 승인' && newStatus !== '최종 승인') {
+          currentUsed -= diff;
+      }
+      userSheet.getRange(j + 1, 9).setValue(currentUsed);
+      break;
+    }
+  }
+  return jsonResponse({ status: 'success' });
+}
 
-        function updateDropdownsForDate(date, closed, pending) {
-            const select = document.getElementById('leave-type'), btn = document.getElementById('submit-btn');
-            select.innerHTML = ''; select.disabled = false; select.className = 'input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold'; select.style.color = '#1d4ed8';
-            btn.disabled = false; btn.className = 'w-full bg-slate-800 text-white p-4 rounded-2xl font-black shadow-xl mt-3 hover:bg-black transition-colors'; btn.innerHTML = '신청하기';
-            if (!date || closed || pending) {
-                select.add(new Option(closed || pending ? '정원 마감' : '↑ 일정을 선택하세요', ''));
-                select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed'; select.style.color = '';
-                btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3'; btn.innerHTML = '신청 불가';
-                return;
-            }
-            const day = new Date(date).getDay();
-            if (day === 6) { select.add(new Option('토요일 반차', '토요일 반차')); select.add(new Option('무급 휴가', '무급 휴가')); }
-            else { ['일반 연차', '오후 반차', '오후 반차 잔여', '토요일 잔여', '무급 휴가'].forEach(v => select.add(new Option(v, v))); }
-            handleLeaveTypeChange();
-        }
+function deleteRequest(p) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const leaveSheet = ss.getSheetByName(LEAVE_SHEET_NAME);
+  const leaveData = leaveSheet.getDataRange().getValues();
+  let rowIndex = -1; let targetReq = null;
 
-        function handleLeaveTypeChange() {
-            const type = document.getElementById('leave-type').value, box = document.getElementById('detail-container'), sel = document.getElementById('leave-detail');
-            sel.innerHTML = ''; box.classList.add('hidden');
-            if (type.includes('잔여')) { 
-                let displayType = type; if (type === '오후 반차 잔여') displayType = '오후 잔여'; 
-                ['10시~13시', '16시~19시', '18시~21시'].forEach(v => sel.add(new Option(`${displayType} (${v}) - 3시간 차감`, `${type} (${v})`))); 
-                box.classList.remove('hidden'); 
-            } else if (type.includes('반차')) { 
-                sel.add(new Option(type + ' - 5시간 차감', type)); 
-                box.classList.remove('hidden'); 
-            }
-        }
+  for (let i = 1; i < leaveData.length; i++) {
+    if (String(leaveData[i][0]) === String(p.requestId)) {
+      rowIndex = i + 1;
+      targetReq = { userId: String(leaveData[i][2]), type: leaveData[i][6], status: leaveData[i][9] };
+      break;
+    }
+  }
+  if (rowIndex === -1) throw "내역 없음";
 
-        async function apiCall(action, data = {}, loaderText = false) {
-            if (loaderText) {
-                const textEl = document.getElementById('loading-text');
-                if (textEl) textEl.innerText = typeof loaderText === 'string' ? loaderText : '데이터 처리 중...';
-                document.getElementById('loading').classList.remove('hidden');
-            }
-            try {
-                const res = await fetch(GAS_WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
-                const json = await res.json();
-                if (json.status === 'error') throw new Error(json.message);
-                return json;
-            } catch (e) { 
-                showAlert(`오류: ${e.message}`, 'error'); 
-                return null; 
-            } finally { 
-                if (loaderText) document.getElementById('loading').classList.add('hidden'); 
-            }
-        }
-
-        // 상태 변경
-        async function updateStatus(id, status) {
-            const res = await apiCall('updateStatus', { requestId: id, status }, '상태 변경 중...');
-            if (res) { 
-                showAlert('반영 완료', 'success'); 
-                await refreshData(false); 
-            }
-        }
-
-        // 내역 삭제
-        async function performDelete(id) {
-            const res = await apiCall('deleteRequest', { requestId: id }, '삭제 처리 중...');
-            if (res) { 
-                showAlert('삭제/취소 완료', 'success'); 
-                await refreshData(false); 
-            }
-        }
-
-        function getDeductionDaysLocally(type) {
-            if (!type) return 0; const t = String(type).toLowerCase();
-            if (t.includes('무급')) return 0; 
-            if (t.includes('잔여')) return 3 / 8; 
-            if (t.includes('반차')) return 5 / 8; 
-            return 1; 
-        }
-
-        function renderDashboard() {
-            const u = state.currentUser; if (!u) return;
-            const isAdmin = String(u.role).includes('admin');
-            
-            if(isAdmin) {
-                document.getElementById('user-history').classList.add('hidden');
-                document.getElementById('admin-panel').classList.remove('hidden');
-            } else {
-                document.getElementById('user-history').classList.remove('hidden');
-                document.getElementById('admin-panel').classList.add('hidden');
-            }
-
-            state.requests = state.requests || [];
-            
-            let used = parseFloat(u.used) || 0;
-            state.requests.forEach(r => { if (String(r.userId) === String(u.id) && String(r.status) !== '최종 승인' && String(r.status) !== '반려') used += getDeductionDaysLocally(r.type); });
-            document.getElementById('total-leave').innerText = u.total;
-            document.getElementById('remaining-leave').innerText = formatDaysHours(parseFloat(u.total) - used);
-
-            const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
-
-            if (!isAdmin) {
-                const body = document.getElementById('history-body'); body.innerHTML = '';
-                const filtered = state.requests.filter(r => String(r.userId) === String(u.id));
-                if (!filtered.length) { body.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-300 font-bold">내역이 없습니다.</td></tr>'; }
-                else {
-                    filtered.forEach(req => {
-                        const statusStr = String(req.status || '');
-                        const color = statusStr.includes('최종') ? 'bg-emerald-100 text-emerald-600' : statusStr.includes('1차') ? 'bg-blue-100 text-blue-600' : (statusStr === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
-                        let cancelBtn = '';
-                        if (!statusStr.includes('승인') || statusStr === '대기') {
-                            cancelBtn = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black hover:bg-rose-100 hover:text-rose-600 transition-all">취소</button>`;
-                        }
-                        body.innerHTML += `
-                            <!-- 모바일 카드 뷰 (4줄 레이아웃 정렬 최적화) -->
-                            <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
-                                <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
-                                    <div class="flex items-baseline gap-2">
-                                        <span class="font-black text-slate-800 text-[15px]">${req.userName}</span>
-                                        <span class="text-[10px] font-bold text-slate-400">${ROLE_MAP_LOCAL[req.userRole] || req.userRole}</span>
-                                    </div>
-                                    <span class="px-2.5 py-1.5 rounded-md text-[10px] font-black ${color}">${req.status}</span>
-                                </td>
-                                <td class="flex flex-col gap-2 w-full mb-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">일정</span>
-                                        <span class="text-[12px] font-bold text-slate-800 text-right break-keep">${formatDate(req.leaveDate)}</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">유형</span>
-                                        <span class="text-[12px] font-black text-blue-500 text-right break-keep">${req.type}</span>
-                                    </div>
-                                    <div class="flex justify-between items-start">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10 pt-0.5">사유</span>
-                                        <span class="text-[12px] text-slate-700 font-medium text-right break-all ml-2">${req.reason}</span>
-                                    </div>
-                                    <div class="flex justify-between items-start">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10 pt-0.5">인수</span>
-                                        <span class="text-[12px] text-slate-700 font-medium text-right break-all ml-2">${req.handover}</span>
-                                    </div>
-                                </td>
-                                ${cancelBtn ? `<td class="flex justify-end items-center border-t border-slate-50 pt-2.5 w-full">${cancelBtn}</td>` : '<td class="hidden"></td>'}
-                            </tr>
-                            <!-- PC 테이블 뷰 -->
-                            <tr class="hidden sm:table-row hover:bg-slate-50 transition-all font-medium border-b border-slate-100">
-                                <td class="p-4">
-                                    <div class="text-sm font-bold text-slate-700">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-[10px] text-slate-400 mt-1.5">신청: ${formatDate(req.requestDate)}</div>
-                                </td>
-                                <td class="p-4 whitespace-normal break-keep">
-                                    <div class="text-xs font-black text-blue-500 mb-1">${req.type}</div>
-                                    <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                </td>
-                                <td class="p-4 text-right align-middle">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <span class="px-3 py-1.5 rounded-full text-xs font-black ${color}">${req.status}</span>
-                                        ${cancelBtn}
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                }
-            }
-            
-            if (isAdmin) {
-                const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
-                const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
-                const summaryEl = document.getElementById('admin-search-summary');
-                let filtered = state.requests;
-                
-                if (searchKeyword) {
-                    filtered = filtered.filter(req => String(req.userName || '').toLowerCase().includes(searchKeyword));
-                    const matchedNames = [...new Set(filtered.map(r => r.userName))];
-                    if (matchedNames.length === 1) {
-                        const tName = matchedNames[0], tId = filtered.find(r => r.userName === tName).userId;
-                        let tTotal = 15, tUsed = 0;
-                        if (state.allUsers) {
-                            const found = state.allUsers.find(user => String(user.id) === String(tId));
-                            if (found) {
-                                tTotal = parseFloat(found.total) || 0; tUsed = parseFloat(found.used) || 0;
-                                filtered.forEach(r => { if (String(r.userId) === String(tId) && (r.status === '대기' || r.status === '1차 승인')) tUsed += getDeductionDaysLocally(r.type); });
-                            }
-                        } else {
-                            filtered.forEach(r => {
-                                if (String(r.userId) === String(tId) && (r.status === '최종 승인' || r.status === '1차 승인' || r.status === '대기')) {
-                                    used += getDeductionDaysLocally(r.type);
-                                }
-                            });
-                        }
-                        
-                        const remain = tTotal - tUsed;
-                        
-                        document.getElementById('search-summary-name').innerText = tName;
-                        document.getElementById('search-summary-total').innerText = tTotal + "일";
-                        document.getElementById('search-summary-used').innerText = formatDaysHours(tUsed);
-                        document.getElementById('search-summary-remain').innerText = formatDaysHours(remain);
-                        
-                        summaryEl.classList.remove('hidden'); summaryEl.classList.add('flex');
-                    } else { summaryEl.classList.add('hidden'); summaryEl.classList.remove('flex'); }
-                } else { summaryEl.classList.add('hidden'); summaryEl.classList.remove('flex'); }
-
-                if (!filtered.length) { adminBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-300 font-bold">검색된 내역이 없습니다.</td></tr>'; }
-                else {
-                    filtered.forEach(req => {
-                        const statusStr = String(req.status || '');
-                        const color = statusStr.includes('최종') ? 'bg-emerald-100 text-emerald-600' : statusStr.includes('1차') ? 'bg-blue-100 text-blue-600' : (statusStr === '반려' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600');
-                        let btns = '';
-                        if (String(u.role) === 'subadmin' && statusStr === '대기') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">1차 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">반려</button>`;
-                        else if (String(u.role) === 'admin' && statusStr === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','최종 승인')" class="bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">최종 승인</button><button onclick="updateStatus('${req.id}','반려')" class="bg-rose-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">반려</button>`;
-                        else if (String(u.role) === 'subadmin' && statusStr === '1차 승인') btns = `<button onclick="updateStatus('${req.id}','대기')" class="bg-amber-400 text-white px-2 py-1.5 rounded text-[10px] font-bold">대기전환</button>`;
-                        else if (String(u.role) === 'admin' && statusStr === '최종 승인') btns = `<button onclick="updateStatus('${req.id}','1차 승인')" class="bg-blue-400 text-white px-2 py-1.5 rounded text-[10px] font-bold">1차 강등</button>`;
-                        btns += `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-400 text-white px-2 py-1.5 rounded text-[10px] font-bold ml-1"><i class="fas fa-trash"></i></button>`;
-
-                        adminBody.innerHTML += `
-                            <!-- 모바일 카드 뷰 (4줄 레이아웃 정렬 최적화) -->
-                            <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
-                                <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
-                                    <div class="flex items-baseline gap-2">
-                                        <span class="font-black text-slate-800 text-[15px]">${req.userName}</span>
-                                        <span class="text-[10px] font-bold text-slate-400">${ROLE_MAP_LOCAL[req.userRole] || req.userRole}</span>
-                                    </div>
-                                    <span class="px-2.5 py-1.5 rounded-md text-[10px] font-black ${color}">${req.status}</span>
-                                </td>
-                                <td class="flex flex-col gap-2 w-full mb-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">일정</span>
-                                        <span class="text-[12px] font-bold text-slate-800 text-right break-keep">${formatDate(req.leaveDate)}</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10">유형</span>
-                                        <span class="text-[12px] font-black text-blue-500 text-right break-keep">${req.type}</span>
-                                    </div>
-                                    <div class="flex justify-between items-start">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10 pt-0.5">사유</span>
-                                        <span class="text-[12px] text-slate-700 font-medium text-right break-all ml-2">${req.reason}</span>
-                                    </div>
-                                    <div class="flex justify-between items-start">
-                                        <span class="text-[11px] font-bold text-slate-400 shrink-0 w-10 pt-0.5">인수</span>
-                                        <span class="text-[12px] text-slate-700 font-medium text-right break-all ml-2">${req.handover}</span>
-                                    </div>
-                                </td>
-                                <td class="flex justify-end items-center gap-1.5 border-t border-slate-50 pt-2.5 w-full">
-                                    ${btns}
-                                </td>
-                            </tr>
-
-                            <!-- PC 테이블 뷰 -->
-                            <tr class="hidden sm:table-row hover:bg-slate-50 transition-all font-medium border-b border-slate-100">
-                                <td class="p-4">
-                                    <div class="font-black text-slate-800 text-sm">${req.userName}</div>
-                                    <div class="text-[10px] text-slate-400 font-bold mt-1">${ROLE_MAP_LOCAL[req.userRole] || req.userRole}</div>
-                                </td>
-                                <td class="p-4">
-                                    <div class="text-sm text-slate-700 font-bold">${formatDate(req.leaveDate)}</div>
-                                    <div class="text-xs font-black text-blue-500 mt-1">${req.type}</div>
-                                </td>
-                                <td class="p-4 whitespace-normal break-keep">
-                                    <div class="text-sm text-slate-700"><span class="font-bold text-slate-400">사유:</span> ${req.reason}</div>
-                                    <div class="text-sm text-slate-700 mt-1"><span class="font-bold text-slate-400">인수:</span> ${req.handover}</div>
-                                </td>
-                                <td class="p-4 align-middle">
-                                    <span class="px-3 py-1.5 rounded-md text-xs font-black ${color}">${req.status}</span>
-                                </td>
-                                <td class="p-4 text-right align-middle">
-                                    <div class="flex justify-end gap-1.5 flex-wrap">${btns}</div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                }
-            }
-            renderCalendar();
-        }
-
-        window.openConfirmAction = function(id, action) { deleteTargetId = id; document.getElementById('confirm-modal').classList.remove('hidden'); };
-        window.closeConfirmModal = function() { document.getElementById('confirm-modal').classList.add('hidden'); };
-        document.getElementById('confirm-action-btn').onclick = () => { performDelete(deleteTargetId); closeConfirmModal(); };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const saved = safeStorage.get('leavepass_user');
-            if (saved) {
-                const d = JSON.parse(saved); state.currentUser = d.user; state.requests = d.requests || [];
-                document.getElementById('auth-section').classList.add('hidden'); document.getElementById('main-section').classList.remove('hidden');
-                const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
-                document.getElementById('welcome-msg').innerText = `안녕하세요 ${String(state.currentUser.role).includes('admin') ? (state.currentUser.role === 'admin' ? '최고 관리자' : '관리자') : ROLE_MAP_LOCAL[state.currentUser.role] + ' ' + state.currentUser.name}님!`;
-                renderDashboard(); renderCalendar();
-            } else document.getElementById('auth-section').classList.remove('hidden'), renderCalendar();
-
-            // 폼 검증 (Validation) 및 로딩 최적화 적용
-            document.getElementById('login-form').onsubmit = async (e) => {
-                e.preventDefault();
-                const idVal = document.getElementById('login-id').value.trim();
-                const pwVal = document.getElementById('login-pw').value.trim();
-                
-                if(!idVal) return showAlert('아이디를 입력해주세요.', 'error');
-                if(!pwVal) return showAlert('비밀번호를 입력해주세요.', 'error');
-
-                const btn = e.target.querySelector('button');
-                const origText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>로그인 중...';
-                btn.disabled = true;
-
-                const res = await apiCall('login', { id: idVal, pw: pwVal }, false);
-                if (res) { 
-                    state.currentUser = res.user; state.requests = res.requests; 
-                    safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
-                    location.reload(); 
-                } else {
-                    btn.innerHTML = origText;
-                    btn.disabled = false;
-                }
-            };
-
-            document.getElementById('register-form').onsubmit = async (e) => {
-                e.preventDefault();
-                const nameVal = document.getElementById('reg-name').value.trim();
-                const birthVal = document.getElementById('reg-birth').value.trim();
-                const phoneVal = document.getElementById('reg-phone').value.trim();
-                const joinVal = document.getElementById('reg-join').value.trim();
-                const idVal = document.getElementById('reg-id').value.trim();
-                const pwVal = document.getElementById('reg-pw').value.trim();
-
-                if(!nameVal) return showAlert('이름을 입력해주세요.', 'error');
-                if(!birthVal) return showAlert('생년월일을 입력해주세요.', 'error');
-                if(!phoneVal) return showAlert('연락처를 입력해주세요.', 'error');
-                if(!joinVal) return showAlert('입사일을 입력해주세요.', 'error');
-                if(!idVal) return showAlert('아이디를 입력해주세요.', 'error');
-                if(!pwVal) return showAlert('비밀번호를 입력해주세요.', 'error');
-
-                const btn = e.target.querySelector('button');
-                const origText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>가입 처리 중...';
-                btn.disabled = true;
-
-                const initialTotalLeave = calculateInitialLeave(joinVal);
-                const res = await apiCall('register', {
-                    name: nameVal, birth: birthVal, phone: phoneVal, joinDate: joinVal, id: idVal, pw: pwVal,
-                    role: document.getElementById('reg-team').value, totalLeave: initialTotalLeave
-                }, false);
-                
-                if (res) {
-                    showAlert('가입이 완료되었습니다. 로그인해주세요!', 'success');
-                    toggleAuthMode(false);
-                    document.getElementById('register-form').reset();
-                }
-                btn.innerHTML = origText;
-                btn.disabled = false;
-            };
-
-            document.getElementById('leave-request-form').onsubmit = async (e) => {
-                e.preventDefault(); 
-                const date = document.getElementById('leave-date').value; 
-                let type = document.getElementById('leave-type').value;
-                if (!document.getElementById('detail-container').classList.contains('hidden')) type = document.getElementById('leave-detail').value;
-                const reasonVal = document.getElementById('leave-reason').value.trim();
-                const handoverVal = document.getElementById('leave-handover').value.trim();
-
-                if(!date) return showAlert('연차 일정을 선택해주세요.', 'error');
-                if(!type) return showAlert('연차 유형을 선택해주세요.', 'error');
-                if(!reasonVal) return showAlert('연차 사유를 입력해주세요.', 'error');
-                if(!handoverVal) return showAlert('인수인계를 입력해주세요.', 'error');
-                
-                const btn = document.getElementById('submit-btn'); 
-                const originalText = btn.innerHTML;
-                
-                btn.disabled = true; 
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>신청 중...';
-
-                const isAdmin = String(state.currentUser.role).includes('admin');
-                const reqStatus = isAdmin ? '최종 승인' : '대기';
-                
-                // 🚀 백엔드로 정확한 시간제 차감값을 전달하기 위해 추가된 로직
-                const deductionAmount = getDeductionDaysLocally(type);
-
-                const newReq = {
-                    id: 'temp-' + Date.now(),
-                    userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
-                    requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: reasonVal, handover: handoverVal,
-                    status: reqStatus,
-                    deduction: deductionAmount // 시간제 차감값(예: 0.375)을 서버로 전송
-                };
-
-                // 화면 0.1초 즉시 렌더링 (Optimistic Update)
-                state.requests = state.requests || [];
-                state.requests.unshift(newReq);
-                document.getElementById('leave-request-form').reset(); 
-                selectedDateStr = ''; updateDropdownsForDate(''); 
-                renderDashboard(); renderCalendar();
-
-                // 서버 전송 (백그라운드 통신)
-                const res = await apiCall('requestLeave', newReq, false);
-                if (res) { 
-                    showAlert('신청되었습니다.', 'success'); 
-                    refreshData(false); 
-                } else {
-                    state.requests = state.requests.filter(r => r.id !== newReq.id);
-                    renderDashboard(); renderCalendar();
-                }
-                
-                btn.disabled = false; 
-                btn.innerHTML = originalText;
-            };
-        });
-
-        // 🚀 버튼 스피너 최적화를 위해 새로고침 함수 개선
-        async function refreshData(trigger = false) {
-            if (!state.currentUser) return;
-            
-            let isBtn = trigger instanceof HTMLElement;
-            let btn = isBtn ? trigger : null;
-            let origText = '';
-            let showGlobalLoader = isBtn ? false : trigger; // 버튼 클릭 시 전역 로딩 오버레이 억제
-
-            if (isBtn) {
-                origText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-1"></i> 데이터 갱신 중...';
-                btn.disabled = true;
-            }
-
-            const res = await apiCall('fetchData', { id: state.currentUser.id, role: state.currentUser.role }, showGlobalLoader);
-            if (res) { 
-                state.currentUser = res.user; 
-                state.requests = res.requests; 
-                if (res.allUsers) state.allUsers = res.allUsers;
-                safeStorage.set('leavepass_user', JSON.stringify({user: res.user, requests: res.requests})); 
-                renderDashboard(); 
-            }
-            
-            if (isBtn) {
-                btn.innerHTML = origText;
-                btn.disabled = false;
-            }
-        }
-        function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
-    </script>
-</body>
-</html>
+  // 삭제하는 내역이 '최종 승인' 상태였다면 연차를 다시 복구
+  if (targetReq.status === '최종 승인') {
+    const diff = getDeductionDays(targetReq.type);
+    const userSheet = ss.getSheetByName(USER_SHEET_NAME);
+    const userData = userSheet.getDataRange().getValues();
+    for (let j = 1; j < userData.length; j++) {
+      if (String(userData[j][0]) === String(targetReq.userId)) {
+        let currentUsed = parseFloat(userData[j][8] || 0);
+        userSheet.getRange(j + 1, 9).setValue(currentUsed - diff);
+        break;
+      }
+    }
+  }
+  
+  leaveSheet.deleteRow(rowIndex);
+  return jsonResponse({ status: 'success' });
+}
