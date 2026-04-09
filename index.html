@@ -24,11 +24,11 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- 글로벌 로딩 오버레이 (반드시 필요한 작업 시에만 제한적으로 사용) -->
+    <!-- 글로벌 로딩 오버레이 -->
     <div id="loading" class="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center hidden backdrop-blur-sm transition-all duration-200">
         <div class="flex flex-col items-center gap-4 bg-white/20 p-8 rounded-3xl shadow-2xl border border-white/30">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent shadow-md"></div>
-            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 동기화 중...</p>
+            <p id="loading-text" class="text-white font-bold text-sm tracking-wide">데이터 처리 중...</p>
         </div>
     </div>
 
@@ -40,7 +40,7 @@
         <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in">
             <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl"><i class="fas fa-check"></i></div>
             <h3 class="text-xl font-black text-slate-800 mb-2">요청을 처리할까요?</h3>
-            <p class="text-sm text-slate-500 mb-8">내역이 즉시 반영됩니다.</p>
+            <p class="text-sm text-slate-500 mb-8">서버에 즉시 반영됩니다.</p>
             <div class="flex gap-3">
                 <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-600 p-3.5 rounded-2xl font-black hover:bg-slate-200 transition-colors">취소</button>
                 <button id="confirm-action-btn" class="flex-1 bg-slate-800 text-white p-3.5 rounded-2xl font-black hover:bg-black transition-colors">확인</button>
@@ -117,7 +117,7 @@
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
 
-                <!-- 캘린더 하단에 별도로 표시되는 날짜별 신청 내역 요약 -->
+                <!-- 캘린더 하단 별도 요약 목록 -->
                 <div id="date-summary-container" class="hidden mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
                     <h4 class="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-3">
                         <i class="fas fa-list-ul text-blue-500"></i> <span id="summary-date-text"></span> 신청 현황
@@ -132,7 +132,7 @@
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">잔여 연차</p>
                         <div class="flex items-baseline gap-2 mt-2">
                             <h2 id="remaining-leave" class="text-3xl sm:text-5xl font-black text-slate-800 tracking-tighter">0일</h2>
-                            <span class="text-slate-400 font-bold text-sm">/ <span id="total-leave">0</span>일</span>
+                            <span class="text-slate-400 font-bold text-sm">/ <span id="total-leave">0일</span></span>
                         </div>
                     </div>
 
@@ -141,7 +141,7 @@
                         <form id="leave-request-form" class="space-y-3">
                             <div class="form-row"><label class="label-text">연차 일정</label><input type="date" id="leave-date" class="input-field" onchange="updateDropdownsForDate(this.value); renderCalendar();"></div>
                             <div class="form-row"><label class="label-text">연차 유형</label>
-                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50/50 text-blue-700 font-bold" style="color: #1d4ed8;">
+                                <select id="leave-type" onchange="handleLeaveTypeChange()" class="input-field cursor-pointer bg-blue-50 text-blue-700 font-bold" style="color: #1d4ed8;">
                                     <option value="" disabled selected>↑ 일정을 선택하세요</option>
                                 </select>
                             </div>
@@ -255,6 +255,7 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         };
 
+        // 🚀 정확한 시간/일 포맷팅 기능 유지
         const formatDaysHours = (days) => {
             if (!days) return "0일";
             const d = Math.floor(Math.abs(days)), h = Math.round((Math.abs(days) - d) * 8);
@@ -265,6 +266,20 @@
             else t += "0일";
             return t;
         };
+
+        // 🚀 문자열 혼용 시트 데이터 완벽 파싱 함수 탑재
+        function parseLeaveString(val) {
+            if (val === undefined || val === null || val === '') return 0;
+            if (typeof val === 'number') return val;
+            let d = 0, h = 0;
+            const str = String(val).trim();
+            const dayMatch = str.match(/(-?\d+(?:\.\d+)?)일/);
+            const hourMatch = str.match(/(-?\d+(?:\.\d+)?)시간/);
+            if (dayMatch) d = parseFloat(dayMatch[1]);
+            if (hourMatch) h = parseFloat(hourMatch[1]);
+            if (!dayMatch && !hourMatch) return parseFloat(str) || 0;
+            return d + (h / 8);
+        }
 
         const showAlert = (msg, type = 'info') => {
             const container = document.getElementById('alert-container');
@@ -305,34 +320,57 @@
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
                       dayOfWeek = new Date(year, month, i).getDay();
                       
-                // 안전한 문자열 치환 비교로 에러 원천 차단
                 const allDayReqs = state.requests.filter(r => formatDate(r.leaveDate) === dateStr && String(r.status) !== '반려');
                 
                 let approved = 0, pending = 0;
                 if (state.currentUser) {
                     const isAdmin = String(state.currentUser.role).includes('admin');
-                    // 일반 사원도 관리자가 쓴 연차를 마감으로 인식하도록 조건 수정
                     const targetReqs = isAdmin ? allDayReqs : allDayReqs.filter(r => String(r.userRole) === String(state.currentUser.role) || String(r.userRole).includes('admin'));
                     approved = targetReqs.filter(r => String(r.status).includes('승인')).length;
                     pending = targetReqs.filter(r => String(r.status) === '대기').length;
                 }
 
                 const cell = document.createElement('div'), isClosed = (dayOfWeek === 0 || dayOfWeek === 3), isPast = dateStr < today;
-                // 모바일에서 글자가 잘리지 않도록 달력 셀 크기를 원상복구
-                cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center transition-all min-h-[60px] sm:min-h-[75px] cursor-pointer bg-white hover:border-blue-300`;
-                if (isClosed) cell.className = `p-1 sm:p-2 border border-slate-100 rounded-xl flex flex-col items-center justify-center min-h-[60px] sm:min-h-[75px] bg-slate-50 opacity-60 cursor-not-allowed`;
+                cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start transition-all min-h-[75px] sm:min-h-[90px] relative overflow-hidden bg-white hover:border-blue-300 cursor-pointer`;
+                if (isClosed) cell.className = `p-1 sm:p-1.5 border border-slate-100 rounded-xl flex flex-col items-center justify-start min-h-[75px] sm:min-h-[90px] bg-slate-50 opacity-60 cursor-not-allowed`;
                 else if (isPast) cell.classList.add('bg-slate-50', 'text-slate-400');
                 if (dateStr === selectedDateStr) cell.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
 
-                cell.innerHTML = `<span class="text-[12px] sm:text-sm font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}">${i}</span>`;
+                const topRow = document.createElement('div');
+                topRow.className = 'w-full flex justify-between items-start mb-1';
+
+                const dateNum = document.createElement('span');
+                dateNum.className = `text-[11px] sm:text-[13px] font-bold ${isClosed ? 'text-red-400' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-700')}`;
+                dateNum.innerText = i;
+                topRow.appendChild(dateNum);
+
                 const badge = document.createElement('span');
-                badge.className = `mt-1 text-[8px] sm:text-[10px] font-black px-1 py-0.5 rounded-md w-full text-center `;
+                badge.className = `text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-md text-center max-w-[60%] truncate `;
                 if (isPast) badge.innerText = '마감', badge.className += 'bg-slate-100 text-slate-400';
                 else if (isClosed) badge.innerText = '휴무', badge.className += 'bg-rose-50 text-rose-500';
                 else if (approved >= 1) badge.innerText = '연차마감', badge.className += 'bg-red-50 text-red-600';
                 else if (pending >= 1) badge.innerText = '승인중', badge.className += 'bg-yellow-50 text-yellow-600';
                 else badge.innerText = '가능', badge.className += 'bg-emerald-50 text-emerald-500';
-                cell.appendChild(badge);
+                topRow.appendChild(badge);
+                cell.appendChild(topRow);
+
+                const reqList = document.createElement('div');
+                reqList.className = 'w-full flex flex-col gap-[3px] mt-auto overflow-y-auto custom-scrollbar max-h-[50px]';
+                allDayReqs.forEach(req => {
+                    const reqItem = document.createElement('div');
+                    const colorClass = String(req.status).includes('승인') ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700';
+                    
+                    let shortType = String(req.type);
+                    if(shortType.includes('일반 연차')) shortType = '연차';
+                    else if(shortType.includes('무급 휴가')) shortType = '무급';
+                    else if(shortType.includes('반차')) shortType = '반차';
+                    else if(shortType.includes('잔여')) shortType = '잔여';
+
+                    reqItem.className = `text-[9px] sm:text-[10px] px-1 py-0.5 rounded w-full font-bold text-left truncate ${colorClass}`;
+                    reqItem.innerText = `${req.userName}(${shortType})`;
+                    reqList.appendChild(reqItem);
+                });
+                cell.appendChild(reqList);
 
                 if (!isClosed) {
                     cell.onclick = () => {
@@ -345,7 +383,6 @@
                 grid.appendChild(cell);
             }
             
-            // 선택된 날짜에 대한 하단 요약 목록 표시 로직
             if (selectedDateStr) {
                 const allDayRequests = state.requests.filter(r => formatDate(r.leaveDate) === selectedDateStr && String(r.status) !== '반려');
                 renderDateSummary(selectedDateStr, allDayRequests);
@@ -373,7 +410,7 @@
             if (!date || closed || pending) {
                 select.add(new Option(closed || pending ? '정원 마감' : '↑ 일정을 선택하세요', ''));
                 select.disabled = true; select.className = 'input-field bg-slate-100 text-slate-400 font-bold cursor-not-allowed'; select.style.color = '';
-                btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3'; btn.innerHTML = '신청 불가';
+                btn.disabled = true; btn.className = 'w-full bg-slate-200 text-slate-400 p-4 rounded-2xl mt-3 cursor-not-allowed'; btn.innerHTML = '신청 불가';
                 return;
             }
             const day = new Date(date).getDay();
@@ -414,21 +451,25 @@
             }
         }
 
-        // 상태 변경
+        // 🚀 지연 업데이트 (상태 변경 시)
         async function updateStatus(id, status) {
             const res = await apiCall('updateStatus', { requestId: id, status }, '상태 변경 중...');
             if (res) { 
-                showAlert('반영 완료', 'success'); 
-                await refreshData(false); 
+                showAlert('변경완료됨', 'success'); 
+                setTimeout(() => {
+                    refreshData(false);
+                }, 5000); 
             }
         }
 
-        // 내역 삭제
+        // 🚀 지연 업데이트 (삭제 시)
         async function performDelete(id) {
-            const res = await apiCall('deleteRequest', { requestId: id }, '삭제 처리 중...');
+            const res = await apiCall('deleteRequest', { requestId: id }, '연차 삭제 중...');
             if (res) { 
                 showAlert('삭제/취소 완료', 'success'); 
-                await refreshData(false); 
+                setTimeout(() => {
+                    refreshData(false);
+                }, 5000); 
             }
         }
 
@@ -454,13 +495,17 @@
 
             state.requests = state.requests || [];
             
-            let used = parseFloat(u.used) || 0;
-            state.requests.forEach(r => { if (String(r.userId) === String(u.id) && String(r.status) !== '최종 승인' && String(r.status) !== '반려') used += getDeductionDaysLocally(r.type); });
-            document.getElementById('total-leave').innerText = u.total;
-            document.getElementById('remaining-leave').innerText = formatDaysHours(parseFloat(u.total) - used);
+            // 🚀 시트 문자열(1일 5시간) 대응 파싱 적용
+            let totalDecimal = parseLeaveString(u.total);
+            let usedDecimal = parseLeaveString(u.used);
+
+            state.requests.forEach(r => { if (String(r.userId) === String(u.id) && String(r.status) !== '최종 승인' && String(r.status) !== '반려') usedDecimal += getDeductionDaysLocally(r.type); });
+            document.getElementById('total-leave').innerText = formatDaysHours(totalDecimal);
+            document.getElementById('remaining-leave').innerText = formatDaysHours(totalDecimal - usedDecimal);
 
             const ROLE_MAP_LOCAL = { 'admin': '최고 관리자', 'subadmin': '관리자', 'desk': '데스크팀', 'user': '진료팀' };
 
+            // 일반 사원 패널 
             if (!isAdmin) {
                 const body = document.getElementById('history-body'); body.innerHTML = '';
                 const filtered = state.requests.filter(r => String(r.userId) === String(u.id));
@@ -474,7 +519,7 @@
                             cancelBtn = `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg text-[11px] font-black hover:bg-rose-100 hover:text-rose-600 transition-all">취소</button>`;
                         }
                         body.innerHTML += `
-                            <!-- 모바일 카드 뷰 (4줄 레이아웃 정렬 최적화) -->
+                            <!-- 모바일 카드 뷰 (4단 1줄 나열 최적화) -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
                                 <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
                                     <div class="flex items-baseline gap-2">
@@ -525,6 +570,7 @@
                 }
             }
             
+            // 관리자 패널 
             if (isAdmin) {
                 const adminBody = document.getElementById('admin-queue-body'); adminBody.innerHTML = '';
                 const searchKeyword = (document.getElementById('admin-search-name') ? document.getElementById('admin-search-name').value.trim().toLowerCase() : '');
@@ -540,7 +586,8 @@
                         if (state.allUsers) {
                             const found = state.allUsers.find(user => String(user.id) === String(tId));
                             if (found) {
-                                tTotal = parseFloat(found.total) || 0; tUsed = parseFloat(found.used) || 0;
+                                tTotal = parseLeaveString(found.total); 
+                                tUsed = parseLeaveString(found.used);
                                 filtered.forEach(r => { if (String(r.userId) === String(tId) && (r.status === '대기' || r.status === '1차 승인')) tUsed += getDeductionDaysLocally(r.type); });
                             }
                         } else {
@@ -554,7 +601,7 @@
                         const remain = tTotal - tUsed;
                         
                         document.getElementById('search-summary-name').innerText = tName;
-                        document.getElementById('search-summary-total').innerText = tTotal + "일";
+                        document.getElementById('search-summary-total').innerText = formatDaysHours(tTotal);
                         document.getElementById('search-summary-used').innerText = formatDaysHours(tUsed);
                         document.getElementById('search-summary-remain').innerText = formatDaysHours(remain);
                         
@@ -575,7 +622,7 @@
                         btns += `<button onclick="openConfirmAction('${req.id}', 'delete')" class="bg-slate-400 text-white px-2 py-1.5 rounded text-[10px] font-bold ml-1"><i class="fas fa-trash"></i></button>`;
 
                         adminBody.innerHTML += `
-                            <!-- 모바일 카드 뷰 (4줄 레이아웃 정렬 최적화) -->
+                            <!-- 모바일 카드 뷰 (4단 1줄 나열 최적화) -->
                             <tr class="sm:hidden flex flex-col bg-white border border-slate-100 rounded-2xl p-4 mb-3 shadow-sm relative">
                                 <td class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
                                     <div class="flex items-baseline gap-2">
@@ -602,11 +649,10 @@
                                         <span class="text-[12px] text-slate-700 font-medium text-right break-all ml-2">${req.handover}</span>
                                     </div>
                                 </td>
-                                <td class="flex justify-end items-center gap-1.5 border-t border-slate-50 pt-2.5 w-full">
+                                <td class="flex justify-end items-center border-t border-slate-50 pt-2.5 w-full">
                                     ${btns}
                                 </td>
                             </tr>
-
                             <!-- PC 테이블 뷰 -->
                             <tr class="hidden sm:table-row hover:bg-slate-50 transition-all font-medium border-b border-slate-100">
                                 <td class="p-4">
@@ -649,7 +695,6 @@
                 renderDashboard(); renderCalendar();
             } else document.getElementById('auth-section').classList.remove('hidden'), renderCalendar();
 
-            // 폼 검증 (Validation) 및 로딩 최적화 적용
             document.getElementById('login-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const idVal = document.getElementById('login-id').value.trim();
@@ -722,61 +767,39 @@
                 if(!type) return showAlert('연차 유형을 선택해주세요.', 'error');
                 if(!reasonVal) return showAlert('연차 사유를 입력해주세요.', 'error');
                 if(!handoverVal) return showAlert('인수인계를 입력해주세요.', 'error');
-                
-                const btn = document.getElementById('submit-btn'); 
-                const originalText = btn.innerHTML;
-                
-                btn.disabled = true; 
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>신청 중...';
 
                 const isAdmin = String(state.currentUser.role).includes('admin');
                 const reqStatus = isAdmin ? '최종 승인' : '대기';
-                
-                // 🚀 백엔드로 정확한 시간제 차감값을 전달하기 위해 추가된 로직
                 const deductionAmount = getDeductionDaysLocally(type);
 
                 const newReq = {
-                    id: 'temp-' + Date.now(),
                     userId: state.currentUser.id, userName: state.currentUser.name, userRole: state.currentUser.role,
                     requestDate: formatDate(new Date()), leaveDate: date, type: type, reason: reasonVal, handover: handoverVal,
                     status: reqStatus,
-                    deduction: deductionAmount // 시간제 차감값(예: 0.375)을 서버로 전송
+                    deduction: deductionAmount
                 };
 
-                // 화면 0.1초 즉시 렌더링 (Optimistic Update)
-                state.requests = state.requests || [];
-                state.requests.unshift(newReq);
-                document.getElementById('leave-request-form').reset(); 
-                selectedDateStr = ''; updateDropdownsForDate(''); 
-                renderDashboard(); renderCalendar();
-
-                // 서버 전송 (백그라운드 통신)
-                const res = await apiCall('requestLeave', newReq, false);
+                const res = await apiCall('requestLeave', newReq, '연차 신청 중...');
                 if (res) { 
                     showAlert('신청되었습니다.', 'success'); 
-                    refreshData(false); 
-                } else {
-                    state.requests = state.requests.filter(r => r.id !== newReq.id);
-                    renderDashboard(); renderCalendar();
+                    document.getElementById('leave-request-form').reset(); 
+                    selectedDateStr = ''; updateDropdownsForDate(''); 
+                    await refreshData(false); 
                 }
-                
-                btn.disabled = false; 
-                btn.innerHTML = originalText;
             };
         });
 
-        // 🚀 버튼 스피너 최적화를 위해 새로고침 함수 개선
         async function refreshData(trigger = false) {
             if (!state.currentUser) return;
             
             let isBtn = trigger instanceof HTMLElement;
             let btn = isBtn ? trigger : null;
             let origText = '';
-            let showGlobalLoader = isBtn ? false : trigger; // 버튼 클릭 시 전역 로딩 오버레이 억제
+            let showGlobalLoader = isBtn ? false : trigger; 
 
             if (isBtn) {
                 origText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-1"></i> 데이터 갱신 중...';
+                btn.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-1"></i> 갱신 중...';
                 btn.disabled = true;
             }
 
